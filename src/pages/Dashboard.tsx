@@ -8,6 +8,7 @@ import {
   FileText,
   RotateCcw,
   Sparkles,
+  Satellite,
 } from 'lucide-react';
 import { NerMap } from '@/components/NerMap';
 import { Card, CardHeader, KpiCard } from '@/components/ui';
@@ -22,10 +23,13 @@ import {
   riskScores,
 } from '@/data/demoData';
 import { useApp } from '@/context/AppContext';
+import { fetchNASAPowerForecast, fetchNASARainfallForLocation, getNASALocationById } from '@/services/nasaApi';
 
 export function Dashboard() {
   const { user, simulationActive, setSimulationActive, showToast } = useApp();
   const [selectedLocationId, setSelectedLocationId] = useState<string>('loc-aizawl');
+  const [nasaForecast, setNasaForecast] = useState<{ rainfall: number; soilMoisture: number; risk: number } | null>(null);
+  const [nasaLoading, setNasaLoading] = useState(false);
 
   const selectedLoc = locations.find((l) => l.id === selectedLocationId) || locations[0];
   const selectedZone = riskZones.find((z) => z.locationId === selectedLocationId);
@@ -35,6 +39,32 @@ export function Dashboard() {
   const highRiskRoads = roads.filter((r) => r.risk === 'CRITICAL' || r.risk === 'HIGH').length;
   const activeAlerts = alerts.filter((a) => !a.acknowledged).length;
   const onlineSensors = soilSensors.filter((s) => s.status === 'ONLINE' || s.status === 'WARNING').length;
+
+  const syncNASADashboard = async () => {
+    setNasaLoading(true);
+    try {
+      const nasaLoc = getNASALocationById(selectedLocationId);
+      if (!nasaLoc) {
+        showToast('No NASA coordinates mapped for this location', 'error');
+        setNasaLoading(false);
+        return;
+      }
+      const forecast = await fetchNASAPowerForecast(nasaLoc.lat, nasaLoc.lng);
+      if (forecast.length > 0) {
+        const latest = forecast[forecast.length - 1];
+        setNasaForecast({
+          rainfall: Number(latest.rainfall.toFixed(1)),
+          soilMoisture: Number(latest.soilMoisture.toFixed(1)),
+          risk: Number(latest.risk.toFixed(1)),
+        });
+        showToast('NASA POWER data synced successfully', 'success');
+      }
+    } catch (e) {
+      showToast('Failed to sync NASA data', 'error');
+    } finally {
+      setNasaLoading(false);
+    }
+  };
 
   const toggleSimulation = () => {
     const next = !simulationActive;
@@ -86,6 +116,15 @@ export function Dashboard() {
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Run Disaster Simulation
               </>
             )}
+          </button>
+          <button
+            onClick={syncNASADashboard}
+            disabled={nasaLoading}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 flex items-center gap-1.5 disabled:opacity-50"
+            title="Sync NASA POWER satellite weather data"
+          >
+            <Satellite className="w-3.5 h-3.5" />
+            {nasaLoading ? 'Syncing...' : 'NASA Live'}
           </button>
           <div className="px-3 py-1.5 rounded-lg bg-navy-800 border border-navy-700 text-xs text-navy-300 flex items-center gap-2">
             <span className="text-navy-400">Role:</span>
@@ -235,14 +274,14 @@ export function Dashboard() {
               <div className="p-2.5 rounded-lg bg-navy-800/80 border border-navy-700/50">
                 <span className="text-navy-400 block">Rainfall (24h)</span>
                 <span className="text-lg font-bold text-blue-300 mt-0.5 block">
-                  {selectedScore?.rainfall ?? 142} mm
+                  {nasaForecast ? `${nasaForecast.rainfall} mm` : `${selectedScore?.rainfall ?? 142} mm`}
                 </span>
                 <span className="text-[10px] text-amber-400">Threshold: 120 mm</span>
               </div>
               <div className="p-2.5 rounded-lg bg-navy-800/80 border border-navy-700/50">
                 <span className="text-navy-400 block">Soil Saturation</span>
                 <span className="text-lg font-bold text-cyan-300 mt-0.5 block">
-                  {selectedScore?.soilMoisture ?? 78}%
+                  {nasaForecast ? `${nasaForecast.soilMoisture}%` : `${selectedScore?.soilMoisture ?? 78}%`}
                 </span>
                 <span className="text-[10px] text-red-400">Critical &gt; 75%</span>
               </div>
@@ -256,7 +295,7 @@ export function Dashboard() {
               <div className="p-2.5 rounded-lg bg-navy-800/80 border border-navy-700/50">
                 <span className="text-navy-400 block">Failure Probability</span>
                 <span className="text-lg font-bold text-red-400 mt-0.5 block">
-                  {selectedScore?.probability ?? 82}%
+                  {nasaForecast ? `${nasaForecast.risk}%` : `${selectedScore?.probability ?? 82}%`}
                 </span>
                 <span className="text-[10px] text-red-400">High vulnerability</span>
               </div>

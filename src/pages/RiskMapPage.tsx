@@ -12,6 +12,7 @@ import {
   Crosshair,
   Maximize2,
   Filter,
+  Satellite,
 } from 'lucide-react';
 import { NerMap } from '@/components/NerMap';
 import { Card, CardHeader } from '@/components/ui';

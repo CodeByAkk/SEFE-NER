@@ -94,6 +94,7 @@ export function NerMap({
     { id: 'roads', label: 'Roads', icon: <MapPin className="w-4 h-4" />, visible: false },
     { id: 'villages', label: 'Villages', icon: <MapPin className="w-4 h-4" />, visible: false },
     { id: 'hospitals', label: 'Hospitals', icon: <MapPin className="w-4 h-4" />, visible: false },
+    { id: 'nasa-imagery', label: 'NASA Satellite', icon: <Layers className="w-4 h-4" />, visible: false },
   ]);
 
   const width = 700;
@@ -259,6 +260,19 @@ export function NerMap({
         <g transform={transform}>
           {/* Background */}
           <rect x="0" y="0" width={width} height={height} fill="#0a1929" />
+
+          {/* NASA Satellite Imagery Layer */}
+          {layers.find((l) => l.id === 'nasa-imagery')?.visible && (
+            <image
+              x="0"
+              y="0"
+              width={width}
+              height={height}
+              href="https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?service=WMS&version=1.3.0&request=GetMap&layers=MODIS_Terra_CorrectedReflectance_TrueColor&styles=&crs=EPSG:4326&bbox=88.0,21.9,97.5,28.5&width=700&height=400&format=image/png&transparent=true"
+              preserveAspectRatio="xMidYMid slice"
+              opacity="0.6"
+            />
+          )}
 
           {/* State boundaries */}
           {Object.entries(stateShapes).map(([key, state]) => (

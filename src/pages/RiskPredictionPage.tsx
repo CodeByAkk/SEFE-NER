@@ -10,15 +10,20 @@ import {
   Layers,
   MapPin,
   CheckCircle2,
+  Satellite,
 } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui';
 import { RiskBadge } from '@/components/ui/Badge';
 import { locations } from '@/data/demoData';
 import { calculateRiskScore, getRiskInputsForLocation } from '@/services/riskEngine';
+import { fetchNASAPowerForecast, fetchNASARainfallForLocation, getNASALocationById } from '@/services/nasaApi';
 import type { Location } from '@/types';
 
 export function RiskPredictionPage() {
   const [selectedLocation, setSelectedLocation] = useState<Location>(locations[0]);
+  const [nasaLoading, setNasaLoading] = useState(false);
+  const [nasaError, setNasaError] = useState<string | null>(null);
+  const [lastNasaSync, setLastNasaSync] = useState<string | null>(null);
 
   // Initial inputs from selected location
   const initialInputs = useMemo(
@@ -33,6 +38,55 @@ export function RiskPredictionPage() {
   const [roadCutting, setRoadCutting] = useState<number>(initialInputs.roadCuttingVulnerability);
   const [historicalFrequency, setHistoricalFrequency] = useState<number>(initialInputs.historicalFrequency);
   const [citizenReports, setCitizenReports] = useState<number>(initialInputs.citizenReports);
+
+  const syncNASAData = async () => {
+    setNasaLoading(true);
+    setNasaError(null);
+    try {
+      const nasaLoc = getNASALocationById(selectedLocation.id) || getNASALocationByCoords(selectedLocation.lat, selectedLocation.lng);
+      if (!nasaLoc) {
+        setNasaError('No NASA coordinates mapped for this location');
+        setNasaLoading(false);
+        return;
+      }
+
+      const [forecast, rainfallData] = await Promise.all([
+        fetchNASAPowerForecast(nasaLoc.lat, nasaLoc.lng),
+        fetchNASARainfallForLocation(nasaLoc.lat, nasaLoc.lng),
+      ]);
+
+      if (forecast.length > 0) {
+        const latest = forecast[forecast.length - 1];
+        setRainfall(Number(latest.rainfall.toFixed(1)));
+        setSoilMoisture(Number(latest.soilMoisture.toFixed(1)));
+        setRainfallForecast(Number((latest.rainfall * 1.2).toFixed(1)));
+      }
+
+      if (rainfallData) {
+        setRainfall(Number(rainfallData.current.toFixed(1)));
+      }
+
+      setLastNasaSync(new Date().toLocaleTimeString());
+    } catch (e) {
+      setNasaError('Failed to fetch NASA data. Please try again.');
+    } finally {
+      setNasaLoading(false);
+    }
+  };
+
+  function getNASALocationByCoords(lat: number, lng: number) {
+    const locs = [
+      { id: 'loc-aizawl', name: 'Aizawl', district: 'Aizawl', state: 'Mizoram', lat: 23.7271, lng: 91.7176 },
+      { id: 'loc-shillong', name: 'Shillong', district: 'East Khasi Hills', state: 'Meghalaya', lat: 25.5788, lng: 91.8933 },
+      { id: 'loc-guwahati', name: 'Guwahati', district: 'Kamrup', state: 'Assam', lat: 26.1445, lng: 91.7362 },
+      { id: 'loc-imphal', name: 'Imphal', district: 'Imphal West', state: 'Manipur', lat: 24.817, lng: 93.9368 },
+      { id: 'loc-kohima', name: 'Kohima', district: 'Kohima', state: 'Nagaland', lat: 25.6586, lng: 94.1103 },
+      { id: 'loc-agartala', name: 'Agartala', district: 'West Tripura', state: 'Tripura', lat: 23.8315, lng: 91.2868 },
+      { id: 'loc-itanagar', name: 'Itanagar', district: 'Papum Pare', state: 'Arunachal Pradesh', lat: 27.0844, lng: 93.6053 },
+      { id: 'loc-gangtok', name: 'Gangtok', district: 'East Sikkim', state: 'Sikkim', lat: 27.3389, lng: 88.6065 },
+    ];
+    return locs.find((l) => Math.abs(l.lat - lat) < 0.1 && Math.abs(l.lng - lng) < 0.1);
+  }
 
   // Live calculated risk score
   const computedScore = useMemo(() => {
@@ -161,6 +215,21 @@ export function RiskPredictionPage() {
           >
             <RotateCcw className="w-4 h-4" />
           </button>
+          <button
+            onClick={syncNASAData}
+            disabled={nasaLoading}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 flex items-center gap-1.5 disabled:opacity-50"
+            title="Sync real NASA POWER weather data"
+          >
+            <Satellite className="w-3.5 h-3.5" />
+            {nasaLoading ? 'Syncing...' : 'NASA Live Data'}
+          </button>
+          {lastNasaSync && (
+            <span className="text-[10px] text-navy-500">Last sync: {lastNasaSync}</span>
+          )}
+          {nasaError && (
+            <span className="text-[10px] text-red-400">{nasaError}</span>
+          )}
         </div>
       </div>
 
