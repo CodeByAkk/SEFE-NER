@@ -1,12 +1,11 @@
-import { useState, useMemo, useEffect, type ReactNode } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import { ZoomIn, ZoomOut, Layers, Search, MapPin, Crosshair, Satellite } from 'lucide-react';
+import { Layers, Search, MapPin, Crosshair, Satellite } from 'lucide-react';
 import L from 'leaflet';
 import { riskZones, locations, incidentReports, roads, villages, hospitals, soilSensors } from '@/data/demoData';
 import { getRiskColor } from '@/services/riskEngine';
 import type { RiskLevel } from '@/types';
 
-// Fix default marker icon paths in Leaflet with bundlers
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -29,15 +28,6 @@ interface NerMapProps {
   showSearch?: boolean;
 }
 
-// NER India bounding box
-const NER_BOUNDS = {
-  minLng: 88.0,
-  maxLng: 97.5,
-  minLat: 21.9,
-  maxLat: 28.5,
-};
-
-// NASA GIBS tile layers
 const NASA_TILE_LAYERS = {
   'MODIS Terra': 'MODIS_Terra_CorrectedReflectance_TrueColor',
   'VIIRS Day': 'VIIRS_SNPP_CorrectedReflectance_TrueColor',
@@ -45,24 +35,8 @@ const NASA_TILE_LAYERS = {
   'MODIS NDVI': 'MODIS_Terra_NDVI_8Day',
 };
 
-const stateShapes: Record<string, { name: string; path: string }> = {
-  sikkim: { name: 'Sikkim', path: 'M 80 180 L 120 160 L 140 175 L 135 210 L 110 220 L 85 205 Z' },
-  arunachal: { name: 'Arunachal Pradesh', path: 'M 350 80 L 580 75 L 620 110 L 590 145 L 500 150 L 420 140 L 370 120 Z' },
-  assam: { name: 'Assam', path: 'M 200 150 L 370 140 L 420 140 L 460 160 L 440 195 L 350 205 L 280 200 L 220 190 L 200 170 Z' },
-  nagaland: { name: 'Nagaland', path: 'M 460 165 L 510 160 L 530 185 L 520 210 L 490 215 L 465 200 Z' },
-  manipur: { name: 'Manipur', path: 'M 430 195 L 490 200 L 500 225 L 470 245 L 435 240 L 420 220 Z' },
-  mizoram: { name: 'Mizoram', path: 'M 330 250 L 400 245 L 420 270 L 410 300 L 370 310 L 335 295 L 320 275 Z' },
-  meghalaya: { name: 'Meghalaya', path: 'M 170 170 L 220 165 L 240 190 L 225 215 L 185 215 L 165 195 Z' },
-  tripura: { name: 'Tripura', path: 'M 240 230 L 280 225 L 290 250 L 275 275 L 245 270 L 235 250 Z' },
-};
-
-function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, zoom);
-  }, [map, center, zoom]);
-  return null;
-}
+const NER_CENTER: [number, number] = [25.0, 92.5];
+const NER_ZOOM = 7;
 
 function MapClickHandler({ onSelectLocation }: { onSelectLocation?: (id: string) => void }) {
   useMapEvents({
@@ -77,6 +51,37 @@ function MapClickHandler({ onSelectLocation }: { onSelectLocation?: (id: string)
       if (clicked) onSelectLocation(clicked.id);
     },
   });
+  return null;
+}
+
+function FlyToLocation({ locationId }: { locationId?: string }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!locationId || !map) return;
+    const loc = locations.find((l) => l.id === locationId);
+    if (!loc) return;
+    map.flyTo([loc.lat, loc.lng], 10, { duration: 1.2 });
+  }, [map, locationId]);
+  return null;
+}
+
+function NASALayer({ enabled, layerName }: { enabled: boolean; layerName: string }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!enabled || !map) return;
+    const wmsLayer = L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi', {
+      layers: layerName,
+      format: 'image/png',
+      transparent: true,
+      version: '1.3.0',
+      attribution: 'NASA GIBS',
+      opacity: 0.7,
+    });
+    wmsLayer.addTo(map);
+    return () => {
+      map.removeLayer(wmsLayer);
+    };
+  }, [map, enabled, layerName]);
   return null;
 }
 
@@ -101,10 +106,6 @@ export function NerMap({
   const [searchResults, setSearchResults] = useState<typeof locations>([]);
   const [showLayers, setShowLayers] = useState(false);
   const [nasaLayer, setNasaLayer] = useState<keyof typeof NASA_TILE_LAYERS>('MODIS Terra');
-  const [mapKey, setMapKey] = useState(0);
-
-  const center: [number, number] = [25.0, 92.5];
-  const zoom = 7;
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -125,10 +126,6 @@ export function NerMap({
     setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)));
   };
 
-  const resetView = () => {
-    setMapKey((k) => k + 1);
-  };
-
   const visibleIncidents = useMemo(() => layers.find((l) => l.id === 'incidents')?.visible ? incidentReports : [], [layers]);
   const visibleSensors = useMemo(() => layers.find((l) => l.id === 'sensors')?.visible ? soilSensors : [], [layers]);
   const visibleVillages = useMemo(() => layers.find((l) => l.id === 'villages')?.visible ? villages : [], [layers]);
@@ -136,10 +133,108 @@ export function NerMap({
   const visibleRoads = useMemo(() => layers.find((l) => l.id === 'roads')?.visible ? roads : [], [layers]);
   const showNasa = layers.find((l) => l.id === 'nasa-imagery')?.visible ?? false;
 
-  const nasaTileUrl = `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?service=WMS&version=1.3.0&request=GetMap&layers=${NASA_TILE_LAYERS[nasaLayer]}&styles=&crs=EPSG:4326&bbox={bbox-epsg-3857}&width=256&height=256&format=image/png&transparent=true`;
-
   return (
     <div className="relative" style={{ height: containerHeight }}>
+      <MapContainer
+        center={NER_CENTER}
+        zoom={NER_ZOOM}
+        className="w-full h-full rounded-xl overflow-hidden border border-navy-700/50"
+        zoomControl={true}
+        attributionControl={false}
+      >
+        <MapClickHandler onSelectLocation={onSelectLocation} />
+        <FlyToLocation locationId={selectedLocationId} />
+        <NASALayer enabled={showNasa} layerName={NASA_TILE_LAYERS[nasaLayer]} />
+
+        {/* Base map */}
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          opacity={showNasa ? 0.4 : 0.9}
+        />
+
+        {/* Risk Zones */}
+        {layers.find((l) => l.id === 'risk')?.visible &&
+          riskZones.map((zone) => {
+            const loc = locations.find((l) => l.id === zone.locationId);
+            if (!loc) return null;
+            const color = getRiskColor(zone.risk);
+            const isSelected = selectedLocationId === zone.locationId;
+
+            return (
+              <Marker key={zone.locationId} position={[loc.lat, loc.lng]}>
+                <Popup>
+                  <div className="text-xs">
+                    <p className="font-bold text-navy-100">{loc.name}</p>
+                    <p className="text-navy-400">{loc.district}, {loc.state}</p>
+                    <p className="mt-1 font-semibold" style={{ color }}>Risk: {zone.risk} ({zone.score}/100)</p>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+
+        {/* Incidents */}
+        {visibleIncidents.map((inc) => (
+          <Marker key={inc.id} position={[inc.lat, inc.lng]}>
+            <Popup>
+              <div className="text-xs">
+                <p className="font-bold text-navy-100">{inc.type}</p>
+                <p className="text-navy-400">{inc.description}</p>
+                <p className="text-[10px] text-navy-500 mt-1">{inc.locationName} • {new Date(inc.timestamp).toLocaleString()}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
+        {/* Sensors */}
+        {visibleSensors.map((sensor) => {
+          const color = sensor.status === 'CRITICAL' ? '#ef4444' : sensor.status === 'WARNING' ? '#eab308' : sensor.status === 'OFFLINE' ? '#627d98' : '#22c55e';
+          return (
+            <Marker key={sensor.id} position={[sensor.lat, sensor.lng]}>
+              <Popup>
+                <div className="text-xs">
+                  <p className="font-bold text-navy-100">{sensor.id}</p>
+                  <p className="text-navy-400">{sensor.locationName}</p>
+                  <p className="text-[10px] text-navy-500 mt-1">
+                    Moisture: {sensor.soilMoisture}% • Temp: {sensor.temperature}°C • Battery: {sensor.battery}%
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* Villages */}
+        {visibleVillages.map((v) => {
+          const loc = locations.find((l) => l.id === v.locationId);
+          if (!loc) return null;
+          return (
+            <Marker key={v.id} position={[loc.lat + 0.01, loc.lng - 0.01]}>
+              <Popup>
+                <div className="text-xs">
+                  <p className="font-bold text-navy-100">{v.name}</p>
+                  <p className="text-navy-400">Pop: {v.population}</p>
+                  <p className="text-[10px] text-red-400">{v.distanceToHazard}km from hazard</p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* Hospitals */}
+        {visibleHospitals.map((h) => (
+          <Marker key={h.id} position={[h.lat, h.lng]}>
+            <Popup>
+              <div className="text-xs">
+                <p className="font-bold text-navy-100">{h.name}</p>
+                <p className="text-navy-400">{h.beds} Beds • {h.emergencyCapacity} Emergency</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+
       {/* Search bar */}
       {showSearch && (
         <div className="absolute top-3 left-3 z-20 w-64">
@@ -226,130 +321,6 @@ export function NerMap({
           )}
         </div>
       )}
-
-      {/* Zoom controls */}
-      <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1">
-        <button onClick={() => {}} className="bg-navy-800/90 backdrop-blur-sm border border-navy-700 rounded-lg p-2 text-navy-200 hover:text-white shadow-lg" title="Zoom In">
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <button onClick={() => {}} className="bg-navy-800/90 backdrop-blur-sm border border-navy-700 rounded-lg p-2 text-navy-200 hover:text-white shadow-lg" title="Zoom Out">
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <button onClick={resetView} className="bg-navy-800/90 backdrop-blur-sm border border-navy-700 rounded-lg p-2 text-navy-200 hover:text-white shadow-lg" title="Reset View">
-          <Crosshair className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Leaflet Map */}
-      <MapContainer
-        key={mapKey}
-        center={center}
-        zoom={zoom}
-        className="w-full h-full rounded-xl overflow-hidden border border-navy-700/50"
-        zoomControl={false}
-        attributionControl={false}
-      >
-        <MapController center={center} zoom={zoom} />
-        <MapClickHandler onSelectLocation={onSelectLocation} />
-
-        {/* Base map */}
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          opacity={showNasa ? 0.4 : 0.9}
-        />
-
-        {/* NASA GIBS Satellite overlay */}
-        {showNasa && (
-          <TileLayer
-            url={nasaTileUrl}
-            opacity={0.7}
-            zIndex={10}
-          />
-        )}
-
-        {/* Risk Zones */}
-        {layers.find((l) => l.id === 'risk')?.visible &&
-          riskZones.map((zone) => {
-            const loc = locations.find((l) => l.id === zone.locationId);
-            if (!loc) return null;
-            const color = getRiskColor(zone.risk);
-            const isSelected = selectedLocationId === zone.locationId;
-            const radius = (zone.radius / 15000) * 20 * (isSelected ? 1.3 : 1);
-
-            return (
-              <Marker key={zone.locationId} position={[loc.lat, loc.lng]}>
-                <Popup>
-                  <div className="text-xs">
-                    <p className="font-bold text-navy-100">{loc.name}</p>
-                    <p className="text-navy-400">{loc.district}, {loc.state}</p>
-                    <p className="mt-1 font-semibold" style={{ color }}>Risk: {zone.risk} ({zone.score}/100)</p>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-
-        {/* Incidents */}
-        {visibleIncidents.map((inc) => (
-          <Marker key={inc.id} position={[inc.lat, inc.lng]}>
-            <Popup>
-              <div className="text-xs">
-                <p className="font-bold text-navy-100">{inc.type}</p>
-                <p className="text-navy-400">{inc.description}</p>
-                <p className="text-[10px] text-navy-500 mt-1">{inc.locationName} • {new Date(inc.timestamp).toLocaleString()}</p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-
-        {/* Sensors */}
-        {visibleSensors.map((sensor) => {
-          const color = sensor.status === 'CRITICAL' ? '#ef4444' : sensor.status === 'WARNING' ? '#eab308' : sensor.status === 'OFFLINE' ? '#627d98' : '#22c55e';
-          return (
-            <Marker key={sensor.id} position={[sensor.lat, sensor.lng]}>
-              <Popup>
-                <div className="text-xs">
-                  <p className="font-bold text-navy-100">{sensor.id}</p>
-                  <p className="text-navy-400">{sensor.locationName}</p>
-                  <p className="text-[10px] text-navy-500 mt-1">
-                    Moisture: {sensor.soilMoisture}% • Temp: {sensor.temperature}°C • Battery: {sensor.battery}%
-                  </p>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-
-        {/* Villages */}
-        {visibleVillages.map((v) => {
-          const loc = locations.find((l) => l.id === v.locationId);
-          if (!loc) return null;
-          return (
-            <Marker key={v.id} position={[loc.lat + 0.01, loc.lng - 0.01]}>
-              <Popup>
-                <div className="text-xs">
-                  <p className="font-bold text-navy-100">{v.name}</p>
-                  <p className="text-navy-400">Pop: {v.population}</p>
-                  <p className="text-[10px] text-red-400">{v.distanceToHazard}km from hazard</p>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
-
-        {/* Hospitals */}
-        {visibleHospitals.map((h) => (
-          <Marker key={h.id} position={[h.lat, h.lng]}>
-            <Popup>
-              <div className="text-xs">
-                <p className="font-bold text-navy-100">{h.name}</p>
-                <p className="text-navy-400">{h.beds} Beds • {h.emergencyCapacity} Emergency</p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
 
       {/* Legend */}
       <div className="absolute bottom-3 left-3 z-10 bg-navy-900/90 backdrop-blur-sm border border-navy-700/50 rounded-lg p-2 shadow-lg">
