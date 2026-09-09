@@ -12,5 +12,8 @@ project/.env
 # logs / os
 npm-debug.log*
 *.log
+tsc-out.txt
+vite.config.ts.timestamp-*.mjs
 .DS_Store
 Thumbs.db
+
