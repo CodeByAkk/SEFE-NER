@@ -16,6 +16,9 @@ import { HistoricalAnalysisPage } from '@/pages/HistoricalAnalysisPage';
 import { SensorMonitoringPage } from '@/pages/SensorMonitoringPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { FieldTeamPage } from '@/pages/FieldTeamPage';
+import { ReportsAnalyticsPage } from '@/pages/ReportsAnalyticsPage';
+import { EscalateAdminPage } from '@/pages/EscalateAdminPage';
 
 function App() {
   return (
@@ -145,11 +148,41 @@ function App() {
             }
           />
           <Route
+            path="/field-team"
+            element={
+              <Layout>
+                <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
+                  <FieldTeamPage />
+                </div>
+              </Layout>
+            }
+          />
+          <Route
             path="/profile"
             element={
               <Layout>
                 <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
                   <ProfilePage />
+                </div>
+              </Layout>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <Layout>
+                <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
+                  <ReportsAnalyticsPage />
+                </div>
+              </Layout>
+            }
+          />
+          <Route
+            path="/escalate"
+            element={
+              <Layout>
+                <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full">
+                  <EscalateAdminPage />
                 </div>
               </Layout>
             }

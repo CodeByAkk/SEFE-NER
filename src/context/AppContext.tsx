@@ -163,8 +163,8 @@ export function filterByDistrict<T extends { locationId?: string; districtId?: s
 
 // Role-based access control
 export const roleAccess: Record<UserRole, string[]> = {
-  ADMIN: ['dashboard', 'risk-map', 'risk-prediction', 'risk-forecast', 'incident-reports', 'ai-image-analysis', 'infrastructure', 'alerts', 'emergency-response', 'historical-analysis', 'sensor-monitoring', 'settings', 'profile'],
-  DISTRICT_OFFICER: ['dashboard', 'risk-map', 'risk-prediction', 'risk-forecast', 'incident-reports', 'ai-image-analysis', 'alerts', 'emergency-response', 'infrastructure', 'historical-analysis', 'sensor-monitoring', 'settings', 'profile'],
+  ADMIN: ['dashboard', 'risk-map', 'risk-prediction', 'risk-forecast', 'incident-reports', 'ai-image-analysis', 'infrastructure', 'alerts', 'emergency-response', 'historical-analysis', 'sensor-monitoring', 'field-team', 'reports', 'escalate', 'settings', 'profile'],
+  DISTRICT_OFFICER: ['dashboard', 'risk-map', 'risk-prediction', 'risk-forecast', 'incident-reports', 'ai-image-analysis', 'alerts', 'emergency-response', 'infrastructure', 'historical-analysis', 'sensor-monitoring', 'field-team', 'reports', 'escalate', 'settings', 'profile'],
   FIELD_OFFICER: ['dashboard', 'risk-map', 'risk-prediction', 'risk-forecast', 'incident-reports', 'ai-image-analysis', 'infrastructure', 'alerts', 'sensor-monitoring', 'historical-analysis', 'profile'],
   CITIZEN: ['dashboard', 'risk-map', 'risk-forecast', 'incident-reports', 'ai-image-analysis', 'infrastructure', 'alerts', 'emergency-response', 'historical-analysis', 'profile'],
 };

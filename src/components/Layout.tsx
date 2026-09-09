@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Map, Brain, TrendingUp, FileText, ScanEye,
   Route, Bell, Siren, BarChart3, Radio, Settings, User,
   Menu, X, LogOut, Wifi, WifiOff, Globe, ShieldAlert, ChevronRight,
+  ShieldCheck, PieChart,
 } from 'lucide-react';
 import { useApp, hasAccess } from '@/context/AppContext';
 import type { UserRole } from '@/types';
@@ -23,9 +24,12 @@ const navItems: NavItem[] = [
   { path: 'incident-reports', label: 'Incident Reports', labelKey: 'nav.incidentReports', icon: <FileText className="w-5 h-5" /> },
   { path: 'ai-image-analysis', label: 'AI Image Analysis', labelKey: 'nav.aiImageAnalysis', icon: <ScanEye className="w-5 h-5" /> },
   { path: 'infrastructure', label: 'Roads & Infrastructure', labelKey: 'nav.infrastructure', icon: <Route className="w-5 h-5" /> },
-  { path: 'alerts', label: 'Alerts', labelKey: 'nav.alerts', icon: <Bell className="w-5 h-5" /> },
+   { path: 'alerts', label: 'Alerts', labelKey: 'nav.alerts', icon: <Bell className="w-5 h-5" /> },
   { path: 'emergency-response', label: 'Emergency Response', labelKey: 'nav.emergencyResponse', icon: <Siren className="w-5 h-5" /> },
   { path: 'historical-analysis', label: 'Historical Analysis', labelKey: 'nav.historicalAnalysis', icon: <BarChart3 className="w-5 h-5" /> },
+  { path: 'field-team', label: 'Field Team', labelKey: 'nav.fieldTeam', icon: <ShieldCheck className="w-5 h-5" /> },
+  { path: 'reports', label: 'Reports & Analytics', labelKey: 'nav.reports', icon: <PieChart className="w-5 h-5" /> },
+  { path: 'escalate', label: 'Escalate to Admin', labelKey: 'nav.escalate', icon: <ShieldAlert className="w-5 h-5" /> },
   { path: 'sensor-monitoring', label: 'Sensor Monitoring', labelKey: 'nav.sensorMonitoring', icon: <Radio className="w-5 h-5" /> },
   { path: 'settings', label: 'Settings', labelKey: 'nav.settings', icon: <Settings className="w-5 h-5" /> },
   { path: 'profile', label: 'Profile', labelKey: 'nav.profile', icon: <User className="w-5 h-5" /> },
