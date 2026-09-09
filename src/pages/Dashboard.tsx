@@ -24,21 +24,38 @@ import {
 } from '@/data/demoData';
 import { useApp } from '@/context/AppContext';
 import { fetchNASAPowerForecast, fetchNASARainfallForLocation, getNASALocationById } from '@/services/nasaApi';
+import { filterByDistrict, isDistrictOfficer } from '@/context/AppContext';
 
 export function Dashboard() {
   const { user, simulationActive, setSimulationActive, showToast } = useApp();
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('loc-aizawl');
+  const [selectedLocationId, setSelectedLocationId] = useState<string>(() => {
+    if (isDistrictOfficer(user)) {
+      const districtLocs = filterByDistrict(locations, user);
+      return districtLocs[0]?.id || 'loc-aizawl';
+    }
+    return 'loc-aizawl';
+  });
   const [nasaForecast, setNasaForecast] = useState<{ rainfall: number; soilMoisture: number; risk: number } | null>(null);
   const [nasaLoading, setNasaLoading] = useState(false);
 
-  const selectedLoc = locations.find((l) => l.id === selectedLocationId) || locations[0];
+  const districtLocations = filterByDistrict(locations, user);
+  const districtLocIds = new Set(districtLocations.map((l) => l.id));
+  const districtName = user?.district || user?.districtId || 'NER Region';
+
+  const selectedLoc = districtLocations.find((l) => l.id === selectedLocationId) || districtLocations[0] || locations[0];
   const selectedZone = riskZones.find((z) => z.locationId === selectedLocationId);
   const selectedScore = riskScores.find((s) => s.locationId === selectedLocationId);
 
-  const criticalZones = riskZones.filter((z) => z.risk === 'CRITICAL').length;
-  const highRiskRoads = roads.filter((r) => r.risk === 'CRITICAL' || r.risk === 'HIGH').length;
-  const activeAlerts = alerts.filter((a) => !a.acknowledged).length;
-  const onlineSensors = soilSensors.filter((s) => s.status === 'ONLINE' || s.status === 'WARNING').length;
+  const districtRiskZones = filterByDistrict(riskZones, user);
+  const districtRoads = filterByDistrict(roads, user);
+  const districtAlerts = filterByDistrict(alerts, user);
+  const districtSensors = filterByDistrict(soilSensors, user);
+  const districtIncidents = filterByDistrict(incidentReports, user);
+
+  const criticalZones = districtRiskZones.filter((z) => z.risk === 'CRITICAL').length;
+  const highRiskRoads = districtRoads.filter((r) => r.risk === 'CRITICAL' || r.risk === 'HIGH').length;
+  const activeAlerts = districtAlerts.filter((a) => !a.acknowledged).length;
+  const onlineSensors = districtSensors.filter((s) => s.status === 'ONLINE' || s.status === 'WARNING').length;
 
   const syncNASADashboard = async () => {
     setNasaLoading(true);
@@ -91,10 +108,12 @@ export function Dashboard() {
             </span>
           </div>
           <h1 className="text-2xl font-bold text-navy-100 mt-1">
-            North Eastern Region Landslide Warning System
+            {isDistrictOfficer(user) ? `${districtName} — District Command Center` : 'North Eastern Region Landslide Warning System'}
           </h1>
           <p className="text-xs text-navy-400 mt-0.5">
-            Real-time multi-hazard telemetry for Assam, Meghalaya, Mizoram, Nagaland, Sikkim & NE States
+            {isDistrictOfficer(user)
+              ? 'District-scoped real-time hazard telemetry and field operations'
+              : 'Real-time multi-hazard telemetry for Assam, Meghalaya, Mizoram, Nagaland, Sikkim & NE States'}
           </p>
         </div>
 
@@ -212,11 +231,11 @@ export function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-navy-700/50 text-navy-200">
-                  {roads.map((road) => (
+                  {districtRoads.map((road) => (
                     <tr key={road.id} className="hover:bg-navy-800/40 transition-colors">
                       <td className="py-3 px-4 font-bold text-navy-100">{road.name}</td>
                       <td className="py-3 px-4 text-navy-400">
-                        {locations.find((l) => l.id === road.locationId)?.name ?? 'NER Region'}
+                        {districtLocations.find((l) => l.id === road.locationId)?.name ?? 'District'}
                       </td>
                       <td className="py-3 px-4">
                         <RiskBadge level={road.risk} />
@@ -321,7 +340,7 @@ export function Dashboard() {
               icon={<FileText className="w-5 h-5" />}
             />
             <div className="divide-y divide-navy-700/50 max-h-72 overflow-y-auto">
-              {incidentReports.map((report) => (
+              {districtIncidents.map((report) => (
                 <div key={report.id} className="p-3 hover:bg-navy-800/40 transition-colors text-xs">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-semibold text-navy-100">{report.type}</span>
@@ -347,7 +366,7 @@ export function Dashboard() {
               icon={<AlertTriangle className="w-5 h-5" />}
             />
             <div className="p-3 space-y-2.5 max-h-64 overflow-y-auto">
-              {alerts.map((alert) => (
+              {districtAlerts.map((alert) => (
                 <div
                   key={alert.id}
                   className="p-3 rounded-lg bg-navy-800/80 border border-navy-700/60 space-y-1.5"

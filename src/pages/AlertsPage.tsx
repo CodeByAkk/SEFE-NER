@@ -19,6 +19,7 @@ import { Card, CardHeader, KpiCard, Modal } from '@/components/ui';
 import { AlertLevelBadge } from '@/components/ui/Badge';
 import { alerts as initialAlerts, locations } from '@/data/demoData';
 import { useApp } from '@/context/AppContext';
+import { filterByDistrict, isDistrictOfficer } from '@/context/AppContext';
 import type { Alert, AlertLevel } from '@/types';
 
 export function AlertsPage() {
@@ -28,18 +29,19 @@ export function AlertsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
 
-  // New alert form
   const [title, setTitle] = useState('');
   const [level, setLevel] = useState<AlertLevel>('CRITICAL');
   const [locationId, setLocationId] = useState(locations[0].id);
   const [impact, setImpact] = useState('');
   const [action, setAction] = useState('');
 
-  const criticalCount = alertList.filter((a) => a.level === 'CRITICAL').length;
-  const warningCount = alertList.filter((a) => a.level === 'WARNING').length;
-  const unacknowledgedCount = alertList.filter((a) => !a.acknowledged).length;
+  const districtAlerts = filterByDistrict(alertList, user);
 
-  const filteredAlerts = alertList.filter((a) => {
+  const criticalCount = districtAlerts.filter((a) => a.level === 'CRITICAL').length;
+  const warningCount = districtAlerts.filter((a) => a.level === 'WARNING').length;
+  const unacknowledgedCount = districtAlerts.filter((a) => !a.acknowledged).length;
+
+  const filteredAlerts = districtAlerts.filter((a) => {
     const matchesLevel = levelFilter === 'All' || a.level === levelFilter;
     const matchesSearch =
       a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -101,10 +103,12 @@ export function AlertsPage() {
             <Volume2 className="w-4 h-4 animate-pulse" /> Emergency Early Warning Dispatch
           </div>
           <h1 className="text-2xl font-bold text-navy-100 mt-1">
-            Hazard Bulletins & Mass Public Alerts
+            {isDistrictOfficer(user) ? `${user?.district || 'District'} Alerts` : 'Hazard Bulletins & Mass Public Alerts'}
           </h1>
           <p className="text-xs text-navy-400 mt-0.5">
-            Common Alerting Protocol (CAP-CP) broadcast network delivering life-saving warnings to citizens, NDRF & district authorities
+            {isDistrictOfficer(user)
+              ? 'District alert management and early warning broadcasts'
+              : 'Common Alerting Protocol (CAP-CP) broadcast network delivering life-saving warnings to citizens, NDRF & district authorities'}
           </p>
         </div>
 

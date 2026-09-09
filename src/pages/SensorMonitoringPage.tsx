@@ -21,26 +21,28 @@ import { Card, CardHeader, KpiCard, Modal } from '@/components/ui';
 import { SensorStatusBadge } from '@/components/ui/Badge';
 import { soilSensors as initialSensors, locations } from '@/data/demoData';
 import { useApp } from '@/context/AppContext';
+import { filterByDistrict, isDistrictOfficer } from '@/context/AppContext';
 import type { SoilSensor, SensorStatus } from '@/types';
 
 export function SensorMonitoringPage() {
-  const { showToast } = useApp();
+  const { user, showToast } = useApp();
   const [sensors, setSensors] = useState<SoilSensor[]>(initialSensors);
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // New sensor form
   const [newSensorId, setNewSensorId] = useState('');
   const [newLocationId, setNewLocationId] = useState(locations[0].id);
   const [newStatus, setNewStatus] = useState<SensorStatus>('ONLINE');
 
-  const onlineCount = sensors.filter((s) => s.status === 'ONLINE').length;
-  const warningCount = sensors.filter((s) => s.status === 'WARNING').length;
-  const criticalCount = sensors.filter((s) => s.status === 'CRITICAL').length;
-  const offlineCount = sensors.filter((s) => s.status === 'OFFLINE').length;
+  const districtSensors = filterByDistrict(sensors, user);
 
-  const filteredSensors = sensors.filter((s) => {
+  const onlineCount = districtSensors.filter((s) => s.status === 'ONLINE').length;
+  const warningCount = districtSensors.filter((s) => s.status === 'WARNING').length;
+  const criticalCount = districtSensors.filter((s) => s.status === 'CRITICAL').length;
+  const offlineCount = districtSensors.filter((s) => s.status === 'OFFLINE').length;
+
+  const filteredSensors = districtSensors.filter((s) => {
     const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
     const matchesSearch =
       s.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -111,10 +113,12 @@ export function SensorMonitoringPage() {
             <Radio className="w-4 h-4 animate-pulse" /> IoT Geotechnical Telemetry Mesh
           </div>
           <h1 className="text-2xl font-bold text-navy-100 mt-1">
-            Real-Time Ground Moisture & Pore Pressure Monitoring
+            {isDistrictOfficer(user) ? `${user?.district || 'District'} Sensor Monitoring` : 'Real-Time Ground Moisture & Pore Pressure Monitoring'}
           </h1>
           <p className="text-xs text-navy-400 mt-0.5">
-            Low-power LoRaWAN wireless sensor network monitoring subsurface water saturation, tilt, and slope temperature
+            {isDistrictOfficer(user)
+              ? 'District IoT sensor telemetry and device health status'
+              : 'Low-power LoRaWAN wireless sensor network monitoring subsurface water saturation, tilt, and slope temperature'}
           </p>
         </div>
 

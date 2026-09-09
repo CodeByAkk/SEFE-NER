@@ -18,32 +18,40 @@ import type {
   ForecastPoint,
   User,
   ImageAnalysis,
+  FieldOfficer,
+  Shelter,
+  EvacuationRoute,
+  Escalation,
 } from '@/types';
 
 export const demoUsers: User[] = [
   { id: 'u1', name: 'Rajesh Kumar', role: 'ADMIN', email: 'admin@nersafe.gov.in', avatar: 'RK' },
-  { id: 'u2', name: 'Priya Devi', role: 'DISTRICT_OFFICER', email: 'officer@nersafe.gov.in', district: 'Aizawl', avatar: 'PD' },
-  { id: 'u3', name: 'Arun Singh', role: 'FIELD_OFFICER', email: 'field@nersafe.gov.in', district: 'Aizawl', avatar: 'AS' },
-  { id: 'u4', name: 'Lalruatfeli', role: 'CITIZEN', email: 'citizen@nersafe.gov.in', district: 'Aizawl', avatar: 'L' },
+  { id: 'u2', name: 'Priya Devi', role: 'DISTRICT_OFFICER', email: 'officer@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'PD' },
+  { id: 'u3', name: 'Arun Singh', role: 'FIELD_OFFICER', email: 'field@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'AS' },
+  { id: 'u4', name: 'Lalruatfeli', role: 'CITIZEN', email: 'citizen@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'L' },
+  { id: 'u5', name: 'David Lianzuala', role: 'FIELD_OFFICER', email: 'david@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'DL' },
+  { id: 'u6', name: 'Sarah Chhakchhuak', role: 'FIELD_OFFICER', email: 'sarah@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'SC' },
+  { id: 'u7', name: 'Vanlalhriata', role: 'FIELD_OFFICER', email: 'vanlal@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'VH' },
+  { id: 'u8', name: 'Zothanpuii', role: 'FIELD_OFFICER', email: 'zothan@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'ZT' },
 ];
 
 export const locations: Location[] = [
-  { id: 'loc-aizawl', name: 'Aizawl', district: 'Aizawl District', state: 'Mizoram', lat: 23.7271, lng: 92.7176, elevation: 1132 },
-  { id: 'loc-shillong', name: 'Shillong', district: 'East Khasi Hills', state: 'Meghalaya', lat: 25.5788, lng: 91.8933, elevation: 1496 },
-  { id: 'loc-kohima', name: 'Kohima', district: 'Kohima District', state: 'Nagaland', lat: 25.6751, lng: 94.1086, elevation: 1444 },
-  { id: 'loc-imphal', name: 'Imphal', district: 'Imphal West', state: 'Manipur', lat: 24.8170, lng: 93.9368, elevation: 786 },
-  { id: 'loc-itanagar', name: 'Itanagar', district: 'Papum Pare', state: 'Arunachal Pradesh', lat: 27.0844, lng: 93.6053, elevation: 440 },
-  { id: 'loc-guwahati', name: 'Guwahati', district: 'Kamrup Metro', state: 'Assam', lat: 26.1445, lng: 91.7362, elevation: 55 },
-  { id: 'loc-tura', name: 'Tura', district: 'West Garo Hills', state: 'Meghalaya', lat: 25.5117, lng: 90.2200, elevation: 358 },
-  { id: 'loc-champhai', name: 'Champhai', district: 'Champhai District', state: 'Mizoram', lat: 23.4567, lng: 93.3293, elevation: 1678 },
-  { id: 'loc-mokokchung', name: 'Mokokchung', district: 'Mokokchung District', state: 'Nagaland', lat: 26.3267, lng: 94.5167, elevation: 1325 },
-  { id: 'loc-ukhrul', name: 'Ukhrul', district: 'Ukhrul District', state: 'Manipur', lat: 25.0903, lng: 94.3623, elevation: 1845 },
-  { id: 'loc-tezu', name: 'Tezu', district: 'Lohit District', state: 'Arunachal Pradesh', lat: 27.9266, lng: 96.1697, elevation: 248 },
-  { id: 'loc-agartala', name: 'Agartala', district: 'West Tripura', state: 'Tripura', lat: 23.8315, lng: 91.2868, elevation: 48 },
-  { id: 'loc-gangtok', name: 'Gangtok', district: 'East Sikkim', state: 'Sikkim', lat: 27.3389, lng: 88.6065, elevation: 1650 },
-  { id: 'loc-dibrugarh', name: 'Dibrugarh', district: 'Dibrugarh District', state: 'Assam', lat: 27.4728, lng: 94.9120, elevation: 118 },
-  { id: 'loc-silchar', name: 'Silchar', district: 'Cachar District', state: 'Assam', lat: 24.8333, lng: 92.7789, elevation: 35 },
-  { id: 'loc-aizawl-south', name: 'Lunglei', district: 'Lunglei District', state: 'Mizoram', lat: 22.8819, lng: 92.7389, elevation: 1022 },
+  { id: 'loc-aizawl', name: 'Aizawl', district: 'Aizawl District', districtId: 'dist-aizawl', state: 'Mizoram', lat: 23.7271, lng: 92.7176, elevation: 1132 },
+  { id: 'loc-shillong', name: 'Shillong', district: 'East Khasi Hills', districtId: 'dist-shillong', state: 'Meghalaya', lat: 25.5788, lng: 91.8933, elevation: 1496 },
+  { id: 'loc-kohima', name: 'Kohima', district: 'Kohima District', districtId: 'dist-kohima', state: 'Nagaland', lat: 25.6751, lng: 94.1086, elevation: 1444 },
+  { id: 'loc-imphal', name: 'Imphal', district: 'Imphal West', districtId: 'dist-imphal', state: 'Manipur', lat: 24.8170, lng: 93.9368, elevation: 786 },
+  { id: 'loc-itanagar', name: 'Itanagar', district: 'Papum Pare', districtId: 'dist-itanagar', state: 'Arunachal Pradesh', lat: 27.0844, lng: 93.6053, elevation: 440 },
+  { id: 'loc-guwahati', name: 'Guwahati', district: 'Kamrup Metro', districtId: 'dist-guwahati', state: 'Assam', lat: 26.1445, lng: 91.7362, elevation: 55 },
+  { id: 'loc-tura', name: 'Tura', district: 'West Garo Hills', districtId: 'dist-tura', state: 'Meghalaya', lat: 25.5117, lng: 90.2200, elevation: 358 },
+  { id: 'loc-champhai', name: 'Champhai', district: 'Champhai District', districtId: 'dist-champhai', state: 'Mizoram', lat: 23.4567, lng: 93.3293, elevation: 1678 },
+  { id: 'loc-mokokchung', name: 'Mokokchung', district: 'Mokokchung District', districtId: 'dist-mokokchung', state: 'Nagaland', lat: 26.3267, lng: 94.5167, elevation: 1325 },
+  { id: 'loc-ukhrul', name: 'Ukhrul', district: 'Ukhrul District', districtId: 'dist-ukhrul', state: 'Manipur', lat: 25.0903, lng: 94.3623, elevation: 1845 },
+  { id: 'loc-tezu', name: 'Tezu', district: 'Lohit District', districtId: 'dist-tezu', state: 'Arunachal Pradesh', lat: 27.9266, lng: 96.1697, elevation: 248 },
+  { id: 'loc-agartala', name: 'Agartala', district: 'West Tripura', districtId: 'dist-agartala', state: 'Tripura', lat: 23.8315, lng: 91.2868, elevation: 48 },
+  { id: 'loc-gangtok', name: 'Gangtok', district: 'East Sikkim', districtId: 'dist-gangtok', state: 'Sikkim', lat: 27.3389, lng: 88.6065, elevation: 1650 },
+  { id: 'loc-dibrugarh', name: 'Dibrugarh', district: 'Dibrugarh District', districtId: 'dist-dibrugarh', state: 'Assam', lat: 27.4728, lng: 94.9120, elevation: 118 },
+  { id: 'loc-silchar', name: 'Silchar', district: 'Cachar District', districtId: 'dist-silchar', state: 'Assam', lat: 24.8333, lng: 92.7789, elevation: 35 },
+  { id: 'loc-aizawl-south', name: 'Lunglei', district: 'Lunglei District', districtId: 'dist-lunglei', state: 'Mizoram', lat: 22.8819, lng: 92.7389, elevation: 1022 },
 ];
 
 export const riskZones: RiskZone[] = [
@@ -503,13 +511,13 @@ export const alerts: Alert[] = [
 ];
 
 export const emergencyTeams: EmergencyTeam[] = [
-  { id: 'team-1', name: 'Team Alpha', type: 'Rescue', status: 'Deployed', location: 'Kohima', personnelCount: 12, currentAssignment: 'NH-29 road blockage' },
-  { id: 'team-2', name: 'Team Bravo', type: 'Engineering', status: 'Deployed', location: 'Shillong', personnelCount: 8, currentAssignment: 'Umiam Bridge inspection' },
-  { id: 'team-3', name: 'Team Charlie', type: 'Medical', status: 'On Standby', location: 'Aizawl', personnelCount: 6 },
-  { id: 'team-4', name: 'Team Delta', type: 'Evacuation', status: 'Available', location: 'Gangtok', personnelCount: 15 },
-  { id: 'team-5', name: 'Team Echo', type: 'Reconnaissance', status: 'Available', location: 'Aizawl', personnelCount: 4 },
-  { id: 'team-6', name: 'Team Foxtrot', type: 'Rescue', status: 'On Standby', location: 'Tura', personnelCount: 10 },
-  { id: 'team-7', name: 'Team Golf', type: 'Engineering', status: 'Returning', location: 'Imphal', personnelCount: 7, currentAssignment: 'Returning from Ukhrul inspection' },
+  { id: 'team-1', name: 'Team Alpha', type: 'Rescue', status: 'Deployed', location: 'Kohima', districtId: 'dist-kohima', personnelCount: 12, currentAssignment: 'NH-29 road blockage' },
+  { id: 'team-2', name: 'Team Bravo', type: 'Engineering', status: 'Deployed', location: 'Shillong', districtId: 'dist-shillong', personnelCount: 8, currentAssignment: 'Umiam Bridge inspection' },
+  { id: 'team-3', name: 'Team Charlie', type: 'Medical', status: 'On Standby', location: 'Aizawl', districtId: 'dist-aizawl', personnelCount: 6 },
+  { id: 'team-4', name: 'Team Delta', type: 'Evacuation', status: 'Available', location: 'Gangtok', districtId: 'dist-gangtok', personnelCount: 15 },
+  { id: 'team-5', name: 'Team Echo', type: 'Reconnaissance', status: 'Available', location: 'Aizawl', districtId: 'dist-aizawl', personnelCount: 4 },
+  { id: 'team-6', name: 'Team Foxtrot', type: 'Rescue', status: 'On Standby', location: 'Tura', districtId: 'dist-tura', personnelCount: 10 },
+  { id: 'team-7', name: 'Team Golf', type: 'Engineering', status: 'Returning', location: 'Imphal', districtId: 'dist-imphal', personnelCount: 7, currentAssignment: 'Returning from Ukhrul inspection' },
 ];
 
 export const emergencyPriorities: EmergencyPriority[] = [
@@ -642,4 +650,34 @@ export const incidentSeverityData = [
   { severity: 'Moderate', count: 38 },
   { severity: 'High', count: 28 },
   { severity: 'Critical', count: 12 },
+];
+
+export const demoFieldOfficers: FieldOfficer[] = [
+  { id: 'fo-1', name: 'Arun Singh', email: 'arun@nersafe.gov.in', phone: '+91-9876543210', districtId: 'dist-aizawl', assignedZones: ['loc-aizawl', 'loc-aizawl-south'], status: 'Active', lastCheckIn: new Date(Date.now() - 10 * 60 * 1000).toISOString(), reportsThisWeek: 4, reportsThisMonth: 12, avatar: 'AS' },
+  { id: 'fo-2', name: 'David Lianzuala', email: 'david@nersafe.gov.in', phone: '+91-9876543211', districtId: 'dist-aizawl', assignedZones: ['loc-aizawl'], status: 'Active', lastCheckIn: new Date(Date.now() - 25 * 60 * 1000).toISOString(), reportsThisWeek: 3, reportsThisMonth: 9, avatar: 'DL' },
+  { id: 'fo-3', name: 'Sarah Chhakchhuak', email: 'sarah@nersafe.gov.in', phone: '+91-9876543212', districtId: 'dist-aizawl', assignedZones: ['loc-aizawl-south'], status: 'On Task', lastCheckIn: new Date(Date.now() - 45 * 60 * 1000).toISOString(), reportsThisWeek: 2, reportsThisMonth: 7, avatar: 'SC' },
+  { id: 'fo-4', name: 'Vanlalhriata', email: 'vanlal@nersafe.gov.in', phone: '+91-9876543213', districtId: 'dist-aizawl', assignedZones: ['loc-aizawl', 'loc-champhai'], status: 'Active', lastCheckIn: new Date(Date.now() - 5 * 60 * 1000).toISOString(), reportsThisWeek: 5, reportsThisMonth: 14, avatar: 'VH' },
+  { id: 'fo-5', name: 'Zothanpuii', email: 'zothan@nersafe.gov.in', phone: '+91-9876543214', districtId: 'dist-aizawl', assignedZones: ['loc-aizawl'], status: 'Offline', lastCheckIn: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), reportsThisWeek: 0, reportsThisMonth: 4, avatar: 'ZT' },
+  { id: 'fo-6', name: 'Rochungnunga', email: 'rochung@nersafe.gov.in', phone: '+91-9876543215', districtId: 'dist-aizawl', assignedZones: ['loc-aizawl-south'], status: 'Active', lastCheckIn: new Date(Date.now() - 15 * 60 * 1000).toISOString(), reportsThisWeek: 2, reportsThisMonth: 6, avatar: 'RC' },
+];
+
+export const demoShelters: Shelter[] = [
+  { id: 'sh-1', name: 'Aizawl Government College Shelter', locationId: 'loc-aizawl', district: 'Aizawl District', capacity: 500, currentOccupancy: 320, status: 'Open', lat: 23.7271, lng: 92.7176 },
+  { id: 'sh-2', name: 'Kulikawn Community Hall', locationId: 'loc-aizawl', district: 'Aizawl District', capacity: 200, currentOccupancy: 180, status: 'Full', lat: 23.7350, lng: 92.7250 },
+  { id: 'sh-3', name: 'Sairang School Shelter', locationId: 'loc-aizawl', district: 'Aizawl District', capacity: 150, currentOccupancy: 45, status: 'Open', lat: 23.7500, lng: 92.7000 },
+  { id: 'sh-4', name: 'Lunglei District HQ Shelter', locationId: 'loc-aizawl-south', district: 'Lunglei District', capacity: 300, currentOccupancy: 210, status: 'Open', lat: 22.8819, lng: 92.7389 },
+  { id: 'sh-5', name: 'Champhai Town Hall', locationId: 'loc-champhai', district: 'Champhai District', capacity: 180, currentOccupancy: 0, status: 'Closed', lat: 23.4567, lng: 93.3293 },
+];
+
+export const demoEvacuationRoutes: EvacuationRoute[] = [
+  { id: 'er-1', name: 'NH-6 East Corridor', district: 'Aizawl District', affectedZones: ['loc-aizawl'], status: 'Blocked', lastUpdated: new Date(Date.now() - 30 * 60 * 1000).toISOString() },
+  { id: 'er-2', name: 'Aizawl Bypass Route', district: 'Aizawl District', affectedZones: ['loc-aizawl', 'loc-aizawl-south'], status: 'Clear', lastUpdated: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
+  { id: 'er-3', name: 'Lunglei-Aizawl Road', district: 'Lunglei District', affectedZones: ['loc-aizawl-south'], status: 'Blocked', lastUpdated: new Date(Date.now() - 45 * 60 * 1000).toISOString() },
+  { id: 'er-4', name: 'Champhai Town Evacuation', district: 'Champhai District', affectedZones: ['loc-champhai'], status: 'Clear', lastUpdated: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() },
+];
+
+export const demoEscalations: Escalation[] = [
+  { id: 'esc-1', districtId: 'dist-aizawl', type: 'zone', targetId: 'loc-aizawl', targetName: 'Aizawl Central Zone', reason: 'Risk score exceeded 85 with multiple villages at risk', escalatedBy: 'u2', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), adminResponse: 'NDRF Team Alpha deployed', status: 'Actioned' },
+  { id: 'esc-2', districtId: 'dist-aizawl', type: 'incident', targetId: 'inc-1', targetName: 'Large slope crack near NH-6', reason: 'Critical infrastructure threat requiring immediate admin attention', escalatedBy: 'u2', timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), status: 'Reviewed' },
+  { id: 'esc-3', districtId: 'dist-aizawl', type: 'zone', targetId: 'loc-aizawl-south', targetName: 'Lunglei Zone', reason: 'Evacuation route blocked, need alternate route approval', escalatedBy: 'u2', timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), adminResponse: 'Alternate route via Sairang approved', status: 'Actioned' },
 ];

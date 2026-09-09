@@ -4,6 +4,54 @@ export type UserRole = 'ADMIN' | 'DISTRICT_OFFICER' | 'FIELD_OFFICER' | 'CITIZEN
 
 export type AlertLevel = 'INFO' | 'WATCH' | 'WARNING' | 'CRITICAL';
 
+export interface FieldOfficer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  districtId: string;
+  assignedZones: string[];
+  status: 'Active' | 'Offline' | 'On Task';
+  lastCheckIn: string;
+  reportsThisWeek: number;
+  reportsThisMonth: number;
+  avatar?: string;
+}
+
+export interface Shelter {
+  id: string;
+  name: string;
+  locationId: string;
+  district: string;
+  capacity: number;
+  currentOccupancy: number;
+  status: 'Open' | 'Full' | 'Closed';
+  lat: number;
+  lng: number;
+}
+
+export interface EvacuationRoute {
+  id: string;
+  name: string;
+  district: string;
+  affectedZones: string[];
+  status: 'Clear' | 'Blocked';
+  lastUpdated: string;
+}
+
+export interface Escalation {
+  id: string;
+  districtId: string;
+  type: 'zone' | 'incident';
+  targetId: string;
+  targetName: string;
+  reason: string;
+  escalatedBy: string;
+  timestamp: string;
+  adminResponse?: string;
+  status: 'Pending' | 'Reviewed' | 'Actioned';
+}
+
 export type SensorStatus = 'ONLINE' | 'OFFLINE' | 'WARNING' | 'CRITICAL';
 
 export type IncidentType =
@@ -24,6 +72,7 @@ export interface User {
   name: string;
   role: UserRole;
   email: string;
+  districtId?: string;
   district?: string;
   avatar?: string;
 }
@@ -32,6 +81,7 @@ export interface Location {
   id: string;
   name: string;
   district: string;
+  districtId: string;
   state: NERState;
   lat: number;
   lng: number;
@@ -140,7 +190,7 @@ export interface IncidentReport {
   hasImage: boolean;
   imageUrl?: string;
   imageAnalysisId?: string;
-  status: 'Pending' | 'Verified' | 'Rejected' | 'Resolved';
+  status: 'Pending' | 'Verified' | 'Rejected' | 'Resolved' | 'Escalated';
   pendingSync?: boolean;
 }
 
@@ -226,6 +276,7 @@ export interface EmergencyTeam {
   type: 'Rescue' | 'Medical' | 'Engineering' | 'Evacuation' | 'Reconnaissance';
   status: 'Available' | 'Deployed' | 'On Standby' | 'Returning';
   location: string;
+  districtId: string;
   personnelCount: number;
   currentAssignment?: string;
 }
@@ -282,4 +333,52 @@ export interface SimulationStep {
   title: string;
   description: string;
   icon: string;
+}
+
+export interface FieldOfficer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  districtId: string;
+  assignedZones: string[];
+  status: 'Active' | 'Offline' | 'On Task';
+  lastCheckIn: string;
+  reportsThisWeek: number;
+  reportsThisMonth: number;
+  avatar?: string;
+}
+
+export interface Shelter {
+  id: string;
+  name: string;
+  locationId: string;
+  district: string;
+  capacity: number;
+  currentOccupancy: number;
+  status: 'Open' | 'Full' | 'Closed';
+  lat: number;
+  lng: number;
+}
+
+export interface EvacuationRoute {
+  id: string;
+  name: string;
+  district: string;
+  affectedZones: string[];
+  status: 'Clear' | 'Blocked';
+  lastUpdated: string;
+}
+
+export interface Escalation {
+  id: string;
+  districtId: string;
+  type: 'zone' | 'incident';
+  targetId: string;
+  targetName: string;
+  reason: string;
+  escalatedBy: string;
+  timestamp: string;
+  adminResponse?: string;
+  status: 'Pending' | 'Reviewed' | 'Actioned';
 }

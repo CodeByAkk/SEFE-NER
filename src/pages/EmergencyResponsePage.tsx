@@ -17,12 +17,13 @@ import {
 } from 'lucide-react';
 import { Card, CardHeader, KpiCard, Modal } from '@/components/ui';
 import { StatusBadge } from '@/components/ui/Badge';
-import { emergencyTeams as initialTeams, emergencyPriorities, locations } from '@/data/demoData';
+import { emergencyTeams as initialTeams, emergencyPriorities, locations, demoShelters, demoEvacuationRoutes } from '@/data/demoData';
 import { useApp } from '@/context/AppContext';
+import { filterByDistrict, isDistrictOfficer } from '@/context/AppContext';
 import type { EmergencyTeam } from '@/types';
 
 export function EmergencyResponsePage() {
-  const { showToast } = useApp();
+  const { user, showToast } = useApp();
   const [teams, setTeams] = useState<EmergencyTeam[]>(initialTeams);
   const [selectedSector, setSelectedSector] = useState<string>('All');
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
@@ -30,10 +31,15 @@ export function EmergencyResponsePage() {
   const [targetLocation, setTargetLocation] = useState(locations[0].name);
   const [assignmentMission, setAssignmentMission] = useState('');
 
-  const totalPersonnel = teams.reduce((acc, t) => acc + t.personnelCount, 0);
-  const deployedCount = teams.filter((t) => t.status === 'Deployed').length;
-  const standbyCount = teams.filter((t) => t.status === 'On Standby').length;
-  const availableCount = teams.filter((t) => t.status === 'Available').length;
+  const districtTeams = filterByDistrict(teams, user);
+  const districtPriorities = filterByDistrict(emergencyPriorities, user);
+  const districtShelters = filterByDistrict(demoShelters, user);
+  const districtRoutes = filterByDistrict(demoEvacuationRoutes, user);
+
+  const totalPersonnel = districtTeams.reduce((acc, t) => acc + t.personnelCount, 0);
+  const deployedCount = districtTeams.filter((t) => t.status === 'Deployed').length;
+  const standbyCount = districtTeams.filter((t) => t.status === 'On Standby').length;
+  const availableCount = districtTeams.filter((t) => t.status === 'Available').length;
 
   const handleToggleStatus = (teamId: string) => {
     setTeams((prev) =>
@@ -86,17 +92,19 @@ export function EmergencyResponsePage() {
             <Siren className="w-4 h-4 animate-bounce" /> NDRF & Multi-Agency Incident Command
           </div>
           <h1 className="text-2xl font-bold text-navy-100 mt-1">
-            Emergency Disaster Response & Resource Deployment
+            {isDistrictOfficer(user) ? `${user?.district || 'District'} Emergency Response` : 'Emergency Disaster Response & Resource Deployment'}
           </h1>
           <p className="text-xs text-navy-400 mt-0.5">
-            Real-time rescue team dispatch, geotechnical engineering assets, and prioritized evacuation corridors across the North East
+            {isDistrictOfficer(user)
+              ? 'District shelters, evacuation routes, and response team management'
+              : 'Real-time rescue team dispatch, geotechnical engineering assets, and prioritized evacuation corridors across the North East'}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
-              const freeTeam = teams.find((t) => t.status === 'Available' || t.status === 'On Standby') || teams[0];
+               const freeTeam = districtTeams.find((t) => t.status === 'Available' || t.status === 'On Standby') || districtTeams[0];
               setSelectedTeamToDeploy(freeTeam);
               setIsDeployModalOpen(true);
             }}
@@ -216,7 +224,7 @@ export function EmergencyResponsePage() {
                       <td className="py-3 px-4 text-right">
                         <button
                           onClick={() => {
-                            const freeTeam = teams.find((t) => t.status === 'Available') || teams[0];
+                             const freeTeam = districtTeams.find((t) => t.status === 'Available') || districtTeams[0];
                             setSelectedTeamToDeploy(freeTeam);
                             setTargetLocation(ep.locationName);
                             setAssignmentMission(ep.recommendedAction);
@@ -269,13 +277,13 @@ export function EmergencyResponsePage() {
                 <Users className="w-5 h-5 text-blue-400" />
                 <div>
                   <h3 className="font-bold text-navy-100 text-sm">Disaster Response Units</h3>
-                  <p className="text-[11px] text-navy-400">{teams.length} Specialized Teams</p>
+                   <p className="text-[11px] text-navy-400">{districtTeams.length} Specialized Teams</p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 max-h-[640px] overflow-y-auto">
-              {teams.map((team) => (
+             <div className="space-y-3 max-h-[640px] overflow-y-auto">
+              {districtTeams.map((team) => (
                 <div
                   key={team.id}
                   className="p-3 rounded-xl bg-navy-800/80 border border-navy-700/60 space-y-2 text-xs"
@@ -326,6 +334,87 @@ export function EmergencyResponsePage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </Card>
+
+          {/* District Shelters */}
+          <Card className="p-0">
+            <CardHeader
+              title="District Shelters"
+              subtitle="Current occupancy and capacity status"
+              icon={<Shield className="w-5 h-5" />}
+            />
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-navy-800/80 text-navy-400 uppercase font-semibold">
+                  <tr>
+                    <th className="py-3 px-4">Shelter Name</th>
+                    <th className="py-3 px-4">Capacity</th>
+                    <th className="py-3 px-4">Occupancy</th>
+                    <th className="py-3 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-navy-700/50 text-navy-200">
+                  {districtShelters.map((shelter) => (
+                    <tr key={shelter.id} className="hover:bg-navy-800/40 transition-colors">
+                      <td className="py-3 px-4 font-bold text-navy-100">{shelter.name}</td>
+                      <td className="py-3 px-4">{shelter.capacity}</td>
+                      <td className="py-3 px-4">
+                        <span className={`font-semibold ${shelter.currentOccupancy / shelter.capacity > 0.9 ? 'text-red-400' : 'text-navy-200'}`}>
+                          {shelter.currentOccupancy} ({Math.round((shelter.currentOccupancy / shelter.capacity) * 100)}%)
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`font-semibold px-2 py-0.5 rounded text-[11px] ${
+                          shelter.status === 'Open' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
+                          shelter.status === 'Full' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                          'bg-navy-700 text-navy-400 border border-navy-600'
+                        }`}>
+                          {shelter.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Evacuation Routes */}
+          <Card className="p-0">
+            <CardHeader
+              title="Evacuation Routes"
+              subtitle="Route status and affected zones"
+              icon={<Compass className="w-5 h-5" />}
+            />
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-navy-800/80 text-navy-400 uppercase font-semibold">
+                  <tr>
+                    <th className="py-3 px-4">Route Name</th>
+                    <th className="py-3 px-4">Affected Zones</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Last Updated</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-navy-700/50 text-navy-200">
+                  {districtRoutes.map((route) => (
+                    <tr key={route.id} className="hover:bg-navy-800/40 transition-colors">
+                      <td className="py-3 px-4 font-bold text-navy-100">{route.name}</td>
+                      <td className="py-3 px-4">{route.affectedZones.length} zones</td>
+                      <td className="py-3 px-4">
+                        <span className={`font-semibold px-2 py-0.5 rounded text-[11px] ${
+                          route.status === 'Clear' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
+                          'bg-red-500/20 text-red-300 border border-red-500/30'
+                        }`}>
+                          {route.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-navy-400">{new Date(route.lastUpdated).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </Card>
         </div>

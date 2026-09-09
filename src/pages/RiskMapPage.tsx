@@ -26,6 +26,8 @@ import {
   hospitals,
   roads,
 } from '@/data/demoData';
+import { useApp } from '@/context/AppContext';
+import { filterByDistrict, isDistrictOfficer } from '@/context/AppContext';
 import type { NERState } from '@/types';
 
 const nerStates: (NERState | 'All')[] = [
@@ -41,11 +43,18 @@ const nerStates: (NERState | 'All')[] = [
 ];
 
 export function RiskMapPage() {
+  const { user } = useApp();
   const [selectedState, setSelectedState] = useState<NERState | 'All'>('All');
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('loc-aizawl');
+  const [selectedLocationId, setSelectedLocationId] = useState<string>(() => {
+    const districtLocs = filterByDistrict(locations, user);
+    return districtLocs[0]?.id || 'loc-aizawl';
+  });
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredLocations = locations.filter((loc) => {
+  const districtLocations = filterByDistrict(locations, user);
+  const districtLocIds = new Set(districtLocations.map((l) => l.id));
+
+  const filteredLocations = districtLocations.filter((loc) => {
     const matchesState = selectedState === 'All' || loc.state === selectedState;
     const matchesSearch =
       loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -54,13 +63,13 @@ export function RiskMapPage() {
     return matchesState && matchesSearch;
   });
 
-  const selectedLoc = locations.find((l) => l.id === selectedLocationId) || locations[0];
+  const selectedLoc = districtLocations.find((l) => l.id === selectedLocationId) || districtLocations[0] || locations[0];
   const selectedZone = riskZones.find((z) => z.locationId === selectedLocationId);
   const selectedScore = riskScores.find((s) => s.locationId === selectedLocationId);
-  const nearbySensors = soilSensors.filter((s) => s.locationId === selectedLocationId);
-  const nearbyVillages = villages.filter((v) => v.locationId === selectedLocationId);
-  const nearbyHospitals = hospitals.filter((h) => h.locationId === selectedLocationId);
-  const nearbyRoads = roads.filter((r) => r.locationId === selectedLocationId);
+  const nearbySensors = soilSensors.filter((s) => districtLocIds.has(s.locationId) && s.locationId === selectedLocationId);
+  const nearbyVillages = villages.filter((v) => districtLocIds.has(v.locationId) && v.locationId === selectedLocationId);
+  const nearbyHospitals = hospitals.filter((h) => districtLocIds.has(h.locationId) && h.locationId === selectedLocationId);
+  const nearbyRoads = roads.filter((r) => districtLocIds.has(r.locationId) && r.locationId === selectedLocationId);
 
   return (
     <div className="space-y-6">
@@ -71,10 +80,12 @@ export function RiskMapPage() {
             <MapIcon className="w-4 h-4" /> GIS Geospatial Intelligence
           </div>
           <h1 className="text-2xl font-bold text-navy-100 mt-1">
-            North-East Landslide Hazard & Risk Map
+            {isDistrictOfficer(user) ? `${user?.district || 'District'} — Risk Map` : 'North-East Landslide Hazard & Risk Map'}
           </h1>
           <p className="text-xs text-navy-400 mt-0.5">
-            Multi-layered topological surveillance with sensor telemetry, roads, and village isolation mapping
+            {isDistrictOfficer(user)
+              ? 'District-bounded topological surveillance with sensor telemetry, roads, and village isolation mapping'
+              : 'Multi-layered topological surveillance with sensor telemetry, roads, and village isolation mapping'}
           </p>
         </div>
 
@@ -127,7 +138,7 @@ export function RiskMapPage() {
 
           {/* District Quick Select Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2">
-            {locations.map((loc) => {
+            {(isDistrictOfficer(user) ? districtLocations : locations).map((loc) => {
               const zone = riskZones.find((z) => z.locationId === loc.id);
               const isSelected = loc.id === selectedLocationId;
               return (

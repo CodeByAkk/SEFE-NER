@@ -14,21 +14,22 @@ import {
   User,
   ShieldCheck,
   Send,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Card, CardHeader, Modal } from '@/components/ui';
 import { RiskBadge, StatusBadge } from '@/components/ui/Badge';
 import { incidentReports, locations } from '@/data/demoData';
 import { useApp } from '@/context/AppContext';
+import { filterByDistrict, isDistrictOfficer } from '@/context/AppContext';
 import type { IncidentReport, IncidentType, RiskLevel } from '@/types';
 
 export function IncidentReportsPage() {
-  const { user, showToast, online, addPendingReport } = useApp();
+  const { user, showToast } = useApp();
   const [reports, setReports] = useState<IncidentReport[]>(incidentReports);
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-  // Form states
   const [type, setType] = useState<IncidentType>('Landslide');
   const [locationId, setLocationId] = useState<string>(locations[0].id);
   const [description, setDescription] = useState<string>('');
@@ -36,7 +37,9 @@ export function IncidentReportsPage() {
   const [reporterName, setReporterName] = useState<string>(user?.name ?? 'Local Resident');
   const [hasImage, setHasImage] = useState<boolean>(false);
 
-  const filteredReports = reports.filter((report) => {
+  const districtReports = filterByDistrict(reports, user);
+
+  const filteredReports = districtReports.filter((report) => {
     const matchesStatus = statusFilter === 'All' || report.status === statusFilter;
     const matchesSearch =
       report.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -44,6 +47,13 @@ export function IncidentReportsPage() {
       report.type.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+
+  const escalateReport = (id: string) => {
+    setReports((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: 'Escalated' as const } : r))
+    );
+    showToast(`Report #${id} escalated to Admin.`, 'warning');
+  };
 
   const handleCreateReport = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,17 +83,7 @@ export function IncidentReportsPage() {
     setIsModalOpen(false);
     setDescription('');
 
-    if (!online) {
-      addPendingReport({
-        id: newReport.id,
-        type: newReport.type,
-        description: newReport.description,
-        timestamp: newReport.timestamp,
-      });
-      showToast('Offline Mode: Report stored locally. Will auto-sync when online.', 'warning');
-    } else {
-      showToast('Incident Report submitted successfully! Field units alerted.', 'success');
-    }
+    showToast('Incident Report submitted successfully! Field units alerted.', 'success');
   };
 
   const updateReportStatus = (id: string, newStatus: 'Verified' | 'Resolved' | 'Rejected') => {
@@ -99,13 +99,15 @@ export function IncidentReportsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-navy-900 border border-navy-700/60">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider">
-            <FileText className="w-4 h-4" /> Crowdsourced Hazard Registry
+            <FileText className="w-4 h-4" /> {isDistrictOfficer(user) ? 'District Incident Registry' : 'Crowdsourced Hazard Registry'}
           </div>
           <h1 className="text-2xl font-bold text-navy-100 mt-1">
-            Citizen & Field Incident Reports
+            {isDistrictOfficer(user) ? `${user?.district || 'District'} Incident Reports` : 'Citizen & Field Incident Reports'}
           </h1>
           <p className="text-xs text-navy-400 mt-0.5">
-            Real-time incident dispatch, ground observations, photograph verifications, and geotechnical status tracking
+            {isDistrictOfficer(user)
+              ? 'Review, verify, and action field and citizen reports within your district'
+              : 'Real-time incident dispatch, ground observations, photograph verifications, and geotechnical status tracking'}
           </p>
         </div>
 
@@ -119,8 +121,8 @@ export function IncidentReportsPage() {
 
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {['All', 'Pending', 'Verified', 'Resolved'].map((st) => (
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          {['All', 'Pending', 'Verified', 'Resolved', 'Escalated'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
@@ -185,8 +187,32 @@ export function IncidentReportsPage() {
                 <span>{new Date(report.timestamp).toLocaleDateString()}</span>
               </div>
 
-              {/* Action Buttons for Verification */}
-              {report.status === 'Pending' && (
+              {/* Action Buttons for District Officer */}
+              {report.status === 'Pending' && isDistrictOfficer(user) && (
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => updateReportStatus(report.id, 'Verified')}
+                    className="flex-1 py-1.5 px-2 rounded bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 text-[11px] font-semibold flex items-center justify-center gap-1 transition-all"
+                  >
+                    <CheckCircle2 className="w-3 h-3" /> Approve
+                  </button>
+                  <button
+                    onClick={() => updateReportStatus(report.id, 'Rejected')}
+                    className="flex-1 py-1.5 px-2 rounded bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 text-[11px] font-semibold flex items-center justify-center gap-1 transition-all"
+                  >
+                    <XCircle className="w-3 h-3" /> Reject
+                  </button>
+                  <button
+                    onClick={() => escalateReport(report.id)}
+                    className="py-1.5 px-2 rounded bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-[11px] font-semibold flex items-center justify-center gap-1 transition-all"
+                    title="Escalate to Admin"
+                  >
+                    <ArrowUpRight className="w-3 h-3" /> Escalate
+                  </button>
+                </div>
+              )}
+
+              {report.status === 'Pending' && !isDistrictOfficer(user) && (
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={() => updateReportStatus(report.id, 'Verified')}

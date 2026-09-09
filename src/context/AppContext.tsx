@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { User, Language, UserRole } from '@/types';
-import { demoUsers } from '@/data/demoData';
+import { demoUsers, locations } from '@/data/demoData';
 import { translate } from '@/i18n/translations';
 
 interface Toast {
@@ -134,6 +134,31 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
+}
+
+export function getDistrictId(user: User | null): string | undefined {
+  return user?.districtId || user?.district;
+}
+
+export function isDistrictOfficer(user: User | null): boolean {
+  return user?.role === 'DISTRICT_OFFICER';
+}
+
+export function filterByDistrict<T extends { locationId?: string; districtId?: string; district?: string }>(
+  items: T[],
+  user: User | null,
+): T[] {
+  const districtId = getDistrictId(user);
+  if (!districtId || !isDistrictOfficer(user)) return items;
+  return items.filter((item) => {
+    if (item.districtId) return item.districtId === districtId;
+    if (item.locationId) {
+      const loc = locations.find((l) => l.id === item.locationId);
+      return loc?.districtId === districtId;
+    }
+    if (item.district) return item.district === user?.district;
+    return true;
+  });
 }
 
 // Role-based access control
