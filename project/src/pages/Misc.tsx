@@ -8,9 +8,9 @@ export function SetupPage() {
         <h2>Connect Supabase</h2>
         <p className="sub">Status: {isSupabaseConfigured ? 'configured ✓' : 'not configured yet'}</p>
         <ol className="small" style={{ lineHeight: 1.8 }}>
-          <li>Create a project at <b>supabase.com</b> → copy <b>Project URL</b> and <b>anon public key</b>.</li>
-          <li>Copy <code>project/.env.example</code> to <code>project/.env</code> and fill <code>VITE_SUPABASE_URL</code>, <code>VITE_SUPABASE_ANON_KEY</code>. Never put the service-role key in the frontend.</li>
-          <li>Supabase SQL Editor → run <code>supabase/migrations/001_schema.sql</code>, then <code>002_rls.sql</code>, then optionally <code>003_seed_demo.sql</code>.</li>
+          <li>Supabase → New project. Copy <b>Project URL</b> and <b>anon public key</b> (Project Settings → API).</li>
+          <li>Set the keys (project/.env): VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_DEMO_MODE=true, VITE_APP_URL=http://localhost:5173</li>
+          <li>Supabase SQL Editor → run migrations in order: 001_schema_a.sql, 001_schema_b.sql, 002_rls_a.sql, 002_rls_b.sql, then optionally 003_seed_demo.sql.</li>
           <li>Auth → Providers → enable Email. For Google OAuth add Client ID/Secret and redirect URL <code>https://&lt;ref&gt;.supabase.co/auth/v1/callback</code>.</li>
           <li>Create the first admin via SQL (see <code>supabase/README_SUPABASE_SETUP.md</code>).</li>
           <li>Run <code>npm install; npm run dev</code> inside <code>project/</code>.</li>

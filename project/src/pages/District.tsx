@@ -14,7 +14,7 @@ export function DistrictDash() {
   async function load() {
     if (!profile?.district) return;
     const { data: all } = await supabase.from('incidents').select('*').order('created_at', { ascending: false }).limit(60);
-    const list = ((all as Incident[]) || []).filter((x) => !profile.district || (x.location_name || '').includes(profile.district.split(' ')[0]));
+    const list = ((all as Incident[]) || []).filter((x) => !profile.district || (x.location_name || '').includes(profile.district));
     setIncidents(list);
     const { data: fo } = await supabase.from('profiles').select('*').eq('role', 'field_officer').eq('district', profile.district);
     setOfficers((fo as Profile[]) || []);
