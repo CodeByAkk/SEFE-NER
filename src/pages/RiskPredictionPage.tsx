@@ -1,34 +1,34 @@
-import { useState, useMemo } from 'react';
-import {
-  Brain,
-  Sliders,
-  Sparkles,
-  AlertTriangle,
-  RotateCcw,
-  TrendingUp,
-  Activity,
-  Layers,
-  MapPin,
-  CheckCircle2,
-  Satellite,
-} from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Brain, Sliders, AlertTriangle, Satellite, RotateCcw } from 'lucide-react';
 import { Card, CardHeader } from '@/components/ui';
 import { RiskBadge } from '@/components/ui/Badge';
+import { LocationSearch } from '@/components/LocationSearch';
 import { locations } from '@/data/demoData';
 import { calculateRiskScore, getRiskInputsForLocation } from '@/services/riskEngine';
-import { fetchNASAPowerForecast, fetchNASARainfallForLocation, getNASALocationById } from '@/services/nasaApi';
+import { fetchWeatherData, getWeatherEmoji } from '@/services/openMeteo';
+import { useApp } from '@/context/AppContext';
 import type { Location } from '@/types';
 
 export function RiskPredictionPage() {
-  const [selectedLocation, setSelectedLocation] = useState<Location>(locations[0]);
+  const { selectedLocation, weatherData } = useApp();
+  const [selectedLocationObj, setSelectedLocationObj] = useState<Location>(locations[0]);
   const [nasaLoading, setNasaLoading] = useState(false);
   const [nasaError, setNasaError] = useState<string | null>(null);
   const [lastNasaSync, setLastNasaSync] = useState<string | null>(null);
 
-  // Initial inputs from selected location
+  useEffect(() => {
+    if (selectedLocation && selectedLocation.latitude) {
+      const demoLoc = locations.find(
+        (l) => Math.abs(l.lat - selectedLocation.latitude) < 0.01 &&
+               Math.abs(l.lng - selectedLocation.longitude) < 0.01
+      );
+      if (demoLoc) setSelectedLocationObj(demoLoc);
+    }
+  }, [selectedLocation]);
+
   const initialInputs = useMemo(
-    () => getRiskInputsForLocation(selectedLocation),
-    [selectedLocation]
+    () => getRiskInputsForLocation(selectedLocationObj),
+    [selectedLocationObj]
   );
 
   const [rainfall, setRainfall] = useState<number>(initialInputs.rainfall);
@@ -39,64 +39,36 @@ export function RiskPredictionPage() {
   const [historicalFrequency, setHistoricalFrequency] = useState<number>(initialInputs.historicalFrequency);
   const [citizenReports, setCitizenReports] = useState<number>(initialInputs.citizenReports);
 
-  const syncNASAData = async () => {
+  const syncLiveData = async () => {
+    if (!selectedLocation) return;
     setNasaLoading(true);
     setNasaError(null);
     try {
-      const nasaLoc = getNASALocationById(selectedLocation.id) || getNASALocationByCoords(selectedLocation.lat, selectedLocation.lng);
-      if (!nasaLoc) {
-        setNasaError('No NASA coordinates mapped for this location');
-        setNasaLoading(false);
-        return;
+      const data = await fetchWeatherData(selectedLocation.latitude, selectedLocation.longitude);
+      if (data) {
+        setRainfall(data.rainfallAccumulation.twentyFourHour);
+        if (data.hourly.soilMoisture.length > 0) {
+          setSoilMoisture(Math.round(data.hourly.soilMoisture[data.hourly.soilMoisture.length - 1]));
+        }
+        setRainfallForecast(data.rainfallAccumulation.twentyFourHour * 1.2);
+        setLastNasaSync(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       }
-
-      const [forecast, rainfallData] = await Promise.all([
-        fetchNASAPowerForecast(nasaLoc.lat, nasaLoc.lng),
-        fetchNASARainfallForLocation(nasaLoc.lat, nasaLoc.lng),
-      ]);
-
-      if (forecast.length > 0) {
-        const latest = forecast[forecast.length - 1];
-        setRainfall(Number(latest.rainfall.toFixed(1)));
-        setSoilMoisture(Number(latest.soilMoisture.toFixed(1)));
-        setRainfallForecast(Number((latest.rainfall * 1.2).toFixed(1)));
-      }
-
-      if (rainfallData) {
-        setRainfall(Number(rainfallData.current.toFixed(1)));
-      }
-
-      setLastNasaSync(new Date().toLocaleTimeString());
-    } catch (e) {
-      setNasaError('Failed to fetch NASA data. Please try again.');
+    } catch {
+      setNasaError('Weather data temporarily unavailable');
     } finally {
       setNasaLoading(false);
     }
   };
 
-  function getNASALocationByCoords(lat: number, lng: number) {
-    const locs = [
-      { id: 'loc-aizawl', name: 'Aizawl', district: 'Aizawl', state: 'Mizoram', lat: 23.7271, lng: 91.7176 },
-      { id: 'loc-shillong', name: 'Shillong', district: 'East Khasi Hills', state: 'Meghalaya', lat: 25.5788, lng: 91.8933 },
-      { id: 'loc-guwahati', name: 'Guwahati', district: 'Kamrup', state: 'Assam', lat: 26.1445, lng: 91.7362 },
-      { id: 'loc-imphal', name: 'Imphal', district: 'Imphal West', state: 'Manipur', lat: 24.817, lng: 93.9368 },
-      { id: 'loc-kohima', name: 'Kohima', district: 'Kohima', state: 'Nagaland', lat: 25.6586, lng: 94.1103 },
-      { id: 'loc-agartala', name: 'Agartala', district: 'West Tripura', state: 'Tripura', lat: 23.8315, lng: 91.2868 },
-      { id: 'loc-itanagar', name: 'Itanagar', district: 'Papum Pare', state: 'Arunachal Pradesh', lat: 27.0844, lng: 93.6053 },
-      { id: 'loc-gangtok', name: 'Gangtok', district: 'East Sikkim', state: 'Sikkim', lat: 27.3389, lng: 88.6065 },
-    ];
-    return locs.find((l) => Math.abs(l.lat - lat) < 0.1 && Math.abs(l.lng - lng) < 0.1);
-  }
-
   // Live calculated risk score
   const computedScore = useMemo(() => {
     return calculateRiskScore({
-      locationId: selectedLocation.id,
+      locationId: selectedLocationObj.id,
       rainfall,
       rainfallForecast,
       soilMoisture,
       slope,
-      elevation: selectedLocation.elevation,
+      elevation: selectedLocationObj.elevation,
       terrainVulnerability: initialInputs.terrainVulnerability,
       landCover: initialInputs.landCover,
       historicalFrequency,
@@ -106,7 +78,7 @@ export function RiskPredictionPage() {
       fieldOfficerReports: initialInputs.fieldOfficerReports,
     });
   }, [
-    selectedLocation,
+    selectedLocationObj,
     rainfall,
     rainfallForecast,
     soilMoisture,
@@ -155,7 +127,7 @@ export function RiskPredictionPage() {
   };
 
   const resetToLocationDefaults = () => {
-    const fresh = getRiskInputsForLocation(selectedLocation);
+    const fresh = getRiskInputsForLocation(selectedLocationObj);
     setRainfall(fresh.rainfall);
     setRainfallForecast(fresh.rainfallForecast);
     setSoilMoisture(fresh.soilMoisture);
@@ -216,13 +188,13 @@ export function RiskPredictionPage() {
             <RotateCcw className="w-4 h-4" />
           </button>
           <button
-            onClick={syncNASAData}
-            disabled={nasaLoading}
+            onClick={syncLiveData}
+            disabled={nasaLoading || !selectedLocation}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 flex items-center gap-1.5 disabled:opacity-50"
-            title="Sync real NASA POWER weather data"
+            title="Sync live weather data from Open-Meteo"
           >
             <Satellite className="w-3.5 h-3.5" />
-            {nasaLoading ? 'Syncing...' : 'NASA Live Data'}
+            {nasaLoading ? 'Syncing...' : 'Live Weather'}
           </button>
           {lastNasaSync && (
             <span className="text-[10px] text-navy-500">Last sync: {lastNasaSync}</span>
@@ -233,32 +205,45 @@ export function RiskPredictionPage() {
         </div>
       </div>
 
-      {/* Target Location Bar */}
+      {/* Target Location Bar with Search */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         <span className="text-xs text-navy-400 font-medium whitespace-nowrap">Selected Sector:</span>
-        {locations.map((loc) => (
-          <button
-            key={loc.id}
-            onClick={() => {
-              setSelectedLocation(loc);
-              const fresh = getRiskInputsForLocation(loc);
-              setRainfall(fresh.rainfall);
-              setRainfallForecast(fresh.rainfallForecast);
-              setSoilMoisture(fresh.soilMoisture);
-              setSlope(fresh.slope);
-              setRoadCutting(fresh.roadCuttingVulnerability);
-              setHistoricalFrequency(fresh.historicalFrequency);
-              setCitizenReports(fresh.citizenReports);
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
-              selectedLocation.id === loc.id
-                ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20'
-                : 'bg-navy-900 border-navy-700/60 text-navy-300 hover:bg-navy-800'
-            }`}
-          >
-            {loc.name}, {loc.state}
-          </button>
-        ))}
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:flex gap-1.5 overflow-x-auto pb-1">
+            {locations.map((loc) => (
+              <button
+                key={loc.id}
+                onClick={() => {
+                  setSelectedLocationObj(loc);
+                  const fresh = getRiskInputsForLocation(loc);
+                  setRainfall(fresh.rainfall);
+                  setRainfallForecast(fresh.rainfallForecast);
+                  setSoilMoisture(fresh.soilMoisture);
+                  setSlope(fresh.slope);
+                  setRoadCutting(fresh.roadCuttingVulnerability);
+                  setHistoricalFrequency(fresh.historicalFrequency);
+                  setCitizenReports(fresh.citizenReports);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
+                  selectedLocationObj.id === loc.id
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20'
+                    : 'bg-navy-900 border-navy-700/60 text-navy-300 hover:bg-navy-800'
+                }`}
+              >
+                {loc.name}, {loc.state}
+              </button>
+            ))}
+          </div>
+          <div className="w-48">
+            <LocationSearch compact={true} />
+          </div>
+          {weatherData && (
+            <span className="text-[10px] text-navy-400 whitespace-nowrap flex items-center gap-1">
+              <span className="text-lg">{getWeatherEmoji(weatherData.current.weatherCode)}</span>
+              {Math.round(weatherData.current.temperature)}°C
+            </span>
+          )}
+        </div>
       </div>
 
       {/* 2-Column Grid: Sliders on Left, Live Model Output on Right */}
@@ -387,8 +372,8 @@ export function RiskPredictionPage() {
                 <span className="text-[10px] font-bold uppercase text-blue-400 tracking-wider">
                   Real-Time AI Output
                 </span>
-                <h3 className="text-xl font-bold text-navy-100">{selectedLocation.name}</h3>
-                <p className="text-xs text-navy-400">{selectedLocation.district}, {selectedLocation.state}</p>
+                 <h3 className="text-xl font-bold text-navy-100">{selectedLocationObj.name}</h3>
+                <p className="text-xs text-navy-400">{selectedLocationObj.district}, {selectedLocationObj.state}</p>
               </div>
               <RiskBadge level={computedScore.level} size="md" />
             </div>

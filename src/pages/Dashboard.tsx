@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ShieldAlert,
   AlertTriangle,
@@ -8,9 +8,17 @@ import {
   FileText,
   RotateCcw,
   Sparkles,
-  Satellite,
+  RefreshCw,
+  Cloud,
+  Droplets,
+  Wind,
+  Gauge,
+  Thermometer,
+  BarChart3,
+  Search,
 } from 'lucide-react';
 import { NerMap } from '@/components/NerMap';
+import { LocationSearch } from '@/components/LocationSearch';
 import { Card, CardHeader, KpiCard } from '@/components/ui';
 import { RiskBadge, AlertLevelBadge, StatusBadge } from '@/components/ui/Badge';
 import {
@@ -23,11 +31,12 @@ import {
   riskScores,
 } from '@/data/demoData';
 import { useApp } from '@/context/AppContext';
-import { fetchNASAPowerForecast, fetchNASARainfallForLocation, getNASALocationById } from '@/services/nasaApi';
+import { getWeatherEmoji, getWeatherDescription } from '@/services/openMeteo';
+import { calculateRiskScore } from '@/services/riskEngine';
 import { filterByDistrict, isDistrictOfficer } from '@/context/AppContext';
 
 export function Dashboard() {
-  const { user, simulationActive, setSimulationActive, showToast } = useApp();
+  const { user, simulationActive, setSimulationActive, showToast, weatherData, weatherLoading, weatherError, lastUpdated, refreshData, selectedLocation } = useApp();
   const [selectedLocationId, setSelectedLocationId] = useState<string>(() => {
     if (isDistrictOfficer(user)) {
       const districtLocs = filterByDistrict(locations, user);
@@ -35,11 +44,8 @@ export function Dashboard() {
     }
     return 'loc-aizawl';
   });
-  const [nasaForecast, setNasaForecast] = useState<{ rainfall: number; soilMoisture: number; risk: number } | null>(null);
-  const [nasaLoading, setNasaLoading] = useState(false);
 
   const districtLocations = filterByDistrict(locations, user);
-  const districtLocIds = new Set(districtLocations.map((l) => l.id));
   const districtName = user?.district || user?.districtId || 'NER Region';
 
   const selectedLoc = districtLocations.find((l) => l.id === selectedLocationId) || districtLocations[0] || locations[0];
@@ -57,41 +63,55 @@ export function Dashboard() {
   const activeAlerts = districtAlerts.filter((a) => !a.acknowledged).length;
   const onlineSensors = districtSensors.filter((s) => s.status === 'ONLINE' || s.status === 'WARNING').length;
 
-  const syncNASADashboard = async () => {
-    setNasaLoading(true);
-    try {
-      const nasaLoc = getNASALocationById(selectedLocationId);
-      if (!nasaLoc) {
-        showToast('No NASA coordinates mapped for this location', 'error');
-        setNasaLoading(false);
-        return;
-      }
-      const forecast = await fetchNASAPowerForecast(nasaLoc.lat, nasaLoc.lng);
-      if (forecast.length > 0) {
-        const latest = forecast[forecast.length - 1];
-        setNasaForecast({
-          rainfall: Number(latest.rainfall.toFixed(1)),
-          soilMoisture: Number(latest.soilMoisture.toFixed(1)),
-          risk: Number(latest.risk.toFixed(1)),
-        });
-        showToast('NASA POWER data synced successfully', 'success');
-      }
-    } catch (e) {
-      showToast('Failed to sync NASA data', 'error');
-    } finally {
-      setNasaLoading(false);
-    }
-  };
-
   const toggleSimulation = () => {
     const next = !simulationActive;
     setSimulationActive(next);
     if (next) {
-      showToast('⚠️ Monsoon Disaster Simulation Activated — Sensor thresholds simulated!', 'warning');
+      showToast('Monsoon Disaster Simulation Activated', 'warning');
     } else {
-      showToast('Simulation reset to real-time normal telemetry.', 'info');
+      showToast('Simulation reset to real-time normal telemetry', 'info');
     }
   };
+
+  useEffect(() => {
+    if (selectedLocation && selectedLocation.latitude) {
+      const demoLoc = locations.find(
+        (l) => Math.abs(l.lat - selectedLocation.latitude) < 0.01 &&
+               Math.abs(l.lng - selectedLocation.longitude) < 0.01
+      );
+      if (demoLoc) setSelectedLocationId(demoLoc.id);
+    }
+  }, [selectedLocation, setSelectedLocationId]);
+
+  
+;
+
+  function calculateWeatherRisk(data: NonNullable<typeof weatherData>) {
+    const rainfall24h = data.rainfallAccumulation.twentyFourHour;
+    const soilMoisture = data.hourly.soilMoisture.length
+      ? data.hourly.soilMoisture[data.hourly.soilMoisture.length - 1]
+      : 50;
+    const slope = selectedLoc.elevation > 1000 ? 42 : 30;
+
+    const score = calculateRiskScore({
+      locationId: selectedLoc.id,
+      rainfall: rainfall24h,
+      rainfallForecast: rainfall24h * 1.2,
+      soilMoisture,
+      slope,
+      elevation: selectedLoc.elevation,
+      terrainVulnerability: selectedLoc.elevation > 1000 ? 70 : 40,
+      landCover: 'Mixed',
+      historicalFrequency: 0,
+      roadCuttingVulnerability: 30,
+      satelliteChangeIndicator: 20,
+      citizenReports: 0,
+      fieldOfficerReports: 0,
+    });
+    return score.score;
+  }
+
+  
 
   return (
     <div className="space-y-6">
@@ -118,13 +138,27 @@ export function Dashboard() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          {weatherLoading && (
+            <span className="text-xs text-navy-400 flex items-center gap-1.5">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Fetching live environmental data...
+            </span>
+          )}
+          {weatherError && (
+            <span className="text-xs text-red-400">Weather data unavailable. <button onClick={refreshData} className="underline">Retry</button></span>
+          )}
+          {!weatherLoading && !weatherError && lastUpdated && (
+            <span className="text-xs text-navy-400">
+              Last updated: {new Date(lastUpdated).toLocaleString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
           <button
             onClick={toggleSimulation}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 border shadow-sm ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 border ${
               simulationActive
                 ? 'bg-red-500/20 text-red-300 border-red-500/40 hover:bg-red-500/30'
                 : 'bg-navy-800 text-navy-200 border-navy-700 hover:bg-navy-700'
             }`}
+            title={simulationActive ? 'Reset simulation' : 'Run disaster simulation'}
           >
             {simulationActive ? (
               <>
@@ -137,14 +171,17 @@ export function Dashboard() {
             )}
           </button>
           <button
-            onClick={syncNASADashboard}
-            disabled={nasaLoading}
+            onClick={refreshData}
+            disabled={weatherLoading || !selectedLocation}
             className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white border border-blue-500 flex items-center gap-1.5 disabled:opacity-50"
-            title="Sync NASA POWER satellite weather data"
+            title="Refresh weather data"
           >
-            <Satellite className="w-3.5 h-3.5" />
-            {nasaLoading ? 'Syncing...' : 'NASA Live'}
+            <RefreshCw className={`w-3.5 h-3.5 ${weatherLoading ? 'animate-spin' : ''}`} />
+            {weatherLoading ? 'Refreshing...' : 'Refresh Data'}
           </button>
+          <div className="w-64">
+            <LocationSearch />
+          </div>
           <div className="px-3 py-1.5 rounded-lg bg-navy-800 border border-navy-700 text-xs text-navy-300 flex items-center gap-2">
             <span className="text-navy-400">Role:</span>
             <span className="font-semibold text-blue-400">{user?.role ?? 'ADMIN'}</span>
@@ -184,6 +221,80 @@ export function Dashboard() {
         />
       </div>
 
+      {/* Weather / Environment Cards */}
+      {selectedLocation && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          {weatherData ? (
+            <>
+              <Card className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <span className="text-2xl">{getWeatherEmoji(weatherData.current.weatherCode)}</span>
+                  <span className="text-xs text-navy-400 uppercase font-semibold">Condition</span>
+                </div>
+                <p className="text-sm font-bold text-navy-100">{getWeatherDescription(weatherData.current.weatherCode)}</p>
+                <p className="text-[10px] text-navy-500 mt-0.5">Open-Meteo</p>
+              </Card>
+              <Card className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Thermometer className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs text-navy-400 uppercase font-semibold">Temp</span>
+                </div>
+                <p className="text-xl font-bold text-navy-100">{Math.round(weatherData.current.temperature)}°C</p>
+                <p className="text-[10px] text-navy-500 mt-0.5">Feels {Math.round(weatherData.current.temperature)}°C</p>
+              </Card>
+              <Card className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Droplets className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs text-navy-400 uppercase font-semibold">Humidity</span>
+                </div>
+                <p className="text-xl font-bold text-navy-100">{Math.round(weatherData.current.humidity)}%</p>
+                <p className="text-[10px] text-navy-500 mt-0.5">Relative</p>
+              </Card>
+              <Card className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Cloud className="w-4 h-4 text-blue-300" />
+                  <span className="text-xs text-navy-400 uppercase font-semibold">Rain 24h</span>
+                </div>
+                <p className="text-xl font-bold text-navy-100">{weatherData.rainfallAccumulation.twentyFourHour.toFixed(1)}mm</p>
+                <p className="text-[10px] text-navy-500 mt-0.5">1h: {weatherData.rainfallAccumulation.oneHour.toFixed(1)}mm</p>
+              </Card>
+              <Card className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Wind className="w-4 h-4 text-purple-400" />
+                  <span className="text-xs text-navy-400 uppercase font-semibold">Wind</span>
+                </div>
+                <p className="text-xl font-bold text-navy-100">{Math.round(weatherData.current.windSpeed)}km/h</p>
+                <p className="text-[10px] text-navy-500 mt-0.5">{weatherData.current.windDirection}</p>
+              </Card>
+              <Card className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Gauge className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs text-navy-400 uppercase font-semibold">Pressure</span>
+                </div>
+                <p className="text-xl font-bold text-navy-100">{Math.round(weatherData.current.pressure)}hPa</p>
+                <p className="text-[10px] text-navy-500 mt-0.5">Sea level</p>
+              </Card>
+              <Card className="p-3 text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <BarChart3 className="w-4 h-4 text-green-400" />
+                  <span className="text-xs text-navy-400 uppercase font-semibold">Elevation</span>
+                </div>
+                <p className="text-xl font-bold text-navy-100">{Math.round(weatherData.current.elevation)}m</p>
+                <p className="text-[10px] text-navy-500 mt-0.5">{weatherData.location.name}</p>
+              </Card>
+            </>
+          ) : (
+            <Card className="p-6 text-center col-span-full">
+              <Search className="w-8 h-8 text-navy-500 mx-auto mb-2" />
+              <p className="text-navy-300 font-medium">Search for a location to start landslide risk analysis.</p>
+              <p className="text-xs text-navy-500 mt-2">
+                Try: Dehradun, Mussoorie, Shimla, Darjeeling, Gangtok
+              </p>
+            </Card>
+          )}
+        </div>
+      )}
+
       {/* Main Grid: Interactive Map + Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: GIS Interactive Map */}
@@ -207,6 +318,12 @@ export function Dashboard() {
                 selectedLocationId={selectedLocationId}
                 onSelectLocation={(id) => setSelectedLocationId(id)}
                 height="460px"
+                searchLocation={selectedLocation ? {
+                  lat: selectedLocation.latitude,
+                  lng: selectedLocation.longitude,
+                  name: selectedLocation.name,
+                  risk: selectedZone?.risk,
+                } : null}
               />
             </div>
           </Card>
@@ -280,10 +397,20 @@ export function Dashboard() {
                 <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider">
                   Telemetry Inspector
                 </span>
-                <h3 className="text-lg font-bold text-navy-100">{selectedLoc.name}</h3>
+                <h3 className="text-lg font-bold text-navy-100">
+                  {weatherData ? weatherData.location.name : selectedLoc.name}
+                </h3>
                 <p className="text-xs text-navy-400">
-                  {selectedLoc.district}, {selectedLoc.state}
+                  {weatherData
+                    ? `${weatherData.location.state || weatherData.location.country}`
+                    : `${selectedLoc.district}, ${selectedLoc.state}`}
                 </p>
+                {weatherData && (
+                  <p className="text-[10px] text-navy-500 mt-0.5 flex items-center gap-1">
+                    <span className="text-lg">{getWeatherEmoji(weatherData.current.weatherCode)}</span>
+                    {getWeatherDescription(weatherData.current.weatherCode)} — Open-Meteo
+                  </p>
+                )}
               </div>
               {selectedZone && <RiskBadge level={selectedZone.risk} size="md" />}
             </div>
@@ -293,14 +420,16 @@ export function Dashboard() {
               <div className="p-2.5 rounded-lg bg-navy-800/80 border border-navy-700/50">
                 <span className="text-navy-400 block">Rainfall (24h)</span>
                 <span className="text-lg font-bold text-blue-300 mt-0.5 block">
-                  {nasaForecast ? `${nasaForecast.rainfall} mm` : `${selectedScore?.rainfall ?? 142} mm`}
+                  {weatherData ? `${weatherData.rainfallAccumulation.twentyFourHour.toFixed(1)} mm` : `${selectedScore?.rainfall ?? 142} mm`}
                 </span>
                 <span className="text-[10px] text-amber-400">Threshold: 120 mm</span>
               </div>
               <div className="p-2.5 rounded-lg bg-navy-800/80 border border-navy-700/50">
                 <span className="text-navy-400 block">Soil Saturation</span>
                 <span className="text-lg font-bold text-cyan-300 mt-0.5 block">
-                  {nasaForecast ? `${nasaForecast.soilMoisture}%` : `${selectedScore?.soilMoisture ?? 78}%`}
+                  {weatherData && weatherData.hourly.soilMoisture.length
+                    ? `${Math.round(weatherData.hourly.soilMoisture[weatherData.hourly.soilMoisture.length - 1])}%`
+                    : `${selectedScore?.soilMoisture ?? 78}%`}
                 </span>
                 <span className="text-[10px] text-red-400">Critical &gt; 75%</span>
               </div>
@@ -314,9 +443,9 @@ export function Dashboard() {
               <div className="p-2.5 rounded-lg bg-navy-800/80 border border-navy-700/50">
                 <span className="text-navy-400 block">Failure Probability</span>
                 <span className="text-lg font-bold text-red-400 mt-0.5 block">
-                  {nasaForecast ? `${nasaForecast.risk}%` : `${selectedScore?.probability ?? 82}%`}
+                  {weatherData ? `${Math.round(calculateWeatherRisk(weatherData))}%` : `${selectedScore?.probability ?? 82}%`}
                 </span>
-                <span className="text-[10px] text-red-400">High vulnerability</span>
+                <span className="text-[10px] text-red-400">Based on real-time conditions</span>
               </div>
             </div>
 

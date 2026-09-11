@@ -29,6 +29,7 @@ import {
 import { useApp } from '@/context/AppContext';
 import { filterByDistrict, isDistrictOfficer } from '@/context/AppContext';
 import type { NERState } from '@/types';
+import type { GeocodingResult } from '@/services/openMeteo';
 
 const nerStates: (NERState | 'All')[] = [
   'All',
@@ -43,7 +44,7 @@ const nerStates: (NERState | 'All')[] = [
 ];
 
 export function RiskMapPage() {
-  const { user } = useApp();
+  const { user, selectedLocation } = useApp();
   const [selectedState, setSelectedState] = useState<NERState | 'All'>('All');
   const [selectedLocationId, setSelectedLocationId] = useState<string>(() => {
     const districtLocs = filterByDistrict(locations, user);
@@ -132,6 +133,12 @@ export function RiskMapPage() {
                 selectedLocationId={selectedLocationId}
                 onSelectLocation={(id) => setSelectedLocationId(id)}
                 height="560px"
+                searchLocation={selectedLocation ? {
+                  lat: selectedLocation.latitude,
+                  lng: selectedLocation.longitude,
+                  name: selectedLocation.name,
+                  risk: riskZones.find((z) => z.locationId === selectedLocationId)?.risk,
+                } : null}
               />
             </div>
           </Card>

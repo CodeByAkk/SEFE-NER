@@ -7,11 +7,41 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Dark theme (default) */
+    --navy-50: 240 244 248;
+    --navy-100: 217 226 236;
+    --navy-200: 187 197 211;
+    --navy-300: 159 179 200;
+    --navy-400: 130 155 177;
+    --navy-500: 98 125 152;
+    --navy-600: 72 101 129;
+    --navy-700: 51 78 104;
+    --navy-800: 36 59 83;
+    --navy-900: 16 42 67;
+    --navy-950: 10 25 41;
+  }
+
+  [data-theme="light"] {
+    --navy-50: 10 25 41;
+    --navy-100: 25 35 55;
+    --navy-200: 52 69 95;
+    --navy-300: 90 110 135;
+    --navy-400: 128 144 165;
+    --navy-500: 165 175 190;
+    --navy-600: 202 210 220;
+    --navy-700: 226 232 240;
+    --navy-800: 235 240 245;
+    --navy-900: 245 248 252;
+    --navy-950: 250 253 255;
+  }
+
   * {
     -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-navy-950 text-navy-100 font-sans antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
   ::-webkit-scrollbar {
     width: 8px;
@@ -25,6 +55,20 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-navy-600;
+  }
+
+  [data-theme="light"] body {
+    background-color: rgb(var(--navy-950));
+    color: rgb(var(--navy-100));
+  }
+  [data-theme="light"] ::-webkit-scrollbar-track {
+    background-color: rgb(var(--navy-900));
+  }
+  [data-theme="light"] ::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--navy-700));
+  }
+  [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--navy-600));
   }
 }
 
@@ -56,5 +100,9 @@
 }
 
 .leaflet-container {
-  background: #0a1929 !important;
+  background: rgb(var(--navy-950)) !important;
+}
+
+[data-theme="light"] .leaflet-container {
+  background: rgb(var(--navy-950)) !important;
 }

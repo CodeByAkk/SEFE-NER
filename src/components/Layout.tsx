@@ -3,11 +3,10 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Map, Brain, TrendingUp, FileText, ScanEye,
   Route, Bell, Siren, BarChart3, Radio, Settings, User,
-  Menu, X, LogOut, Wifi, WifiOff, Globe, ShieldAlert, ChevronRight,
-  ShieldCheck, PieChart,
+  Menu, LogOut,   Wifi, WifiOff, Globe, ShieldAlert, ChevronRight,
+  ShieldCheck, PieChart, Sun, Moon,
 } from 'lucide-react';
 import { useApp, hasAccess } from '@/context/AppContext';
-import type { UserRole } from '@/types';
 
 interface NavItem {
   path: string;
@@ -36,7 +35,7 @@ const navItems: NavItem[] = [
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { user, logout, t, online, toggleOnline, pendingReports, language, setLanguage } = useApp();
+  const { user, logout, t, online, toggleOnline, pendingReports, language, setLanguage, theme, toggleTheme } = useApp();
   const navigate = useNavigate();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -134,6 +133,16 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
+             {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center w-8 h-8 rounded-lg bg-navy-800 hover:bg-navy-700 text-navy-300 hover:text-navy-100 transition-all"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+
             {/* Language selector */}
             <button
               onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}

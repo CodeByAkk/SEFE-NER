@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { Layers, Search, MapPin, Crosshair, Satellite } from 'lucide-react';
 import L from 'leaflet';
-import { riskZones, locations, incidentReports, roads, villages, hospitals, soilSensors } from '@/data/demoData';
+import { riskZones, locations, incidentReports, villages, hospitals, soilSensors } from '@/data/demoData';
 import { getRiskColor } from '@/services/riskEngine';
 import type { RiskLevel } from '@/types';
 
@@ -26,6 +26,7 @@ interface NerMapProps {
   height?: string;
   showLayerControl?: boolean;
   showSearch?: boolean;
+  searchLocation?: { lat: number; lng: number; name: string; risk?: string } | null;
 }
 
 const NASA_TILE_LAYERS = {
@@ -65,6 +66,15 @@ function FlyToLocation({ locationId }: { locationId?: string }) {
   return null;
 }
 
+function FlyToSearchLocation({ searchLocation }: { searchLocation?: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!searchLocation || !map) return;
+    map.flyTo([searchLocation.lat, searchLocation.lng], 10, { duration: 1.2 });
+  }, [map, searchLocation]);
+  return null;
+}
+
 function NASALayer({ enabled, layerName }: { enabled: boolean; layerName: string }) {
   const map = useMap();
   useEffect(() => {
@@ -91,6 +101,7 @@ export function NerMap({
   height: containerHeight = '500px',
   showLayerControl = true,
   showSearch = true,
+  searchLocation = null,
 }: NerMapProps) {
   const [layers, setLayers] = useState<MapLayer[]>([
     { id: 'risk', label: 'Landslide Risk', icon: <MapPin className="w-4 h-4" />, visible: true },
@@ -130,7 +141,6 @@ export function NerMap({
   const visibleSensors = useMemo(() => layers.find((l) => l.id === 'sensors')?.visible ? soilSensors : [], [layers]);
   const visibleVillages = useMemo(() => layers.find((l) => l.id === 'villages')?.visible ? villages : [], [layers]);
   const visibleHospitals = useMemo(() => layers.find((l) => l.id === 'hospitals')?.visible ? hospitals : [], [layers]);
-  const visibleRoads = useMemo(() => layers.find((l) => l.id === 'roads')?.visible ? roads : [], [layers]);
   const showNasa = layers.find((l) => l.id === 'nasa-imagery')?.visible ?? false;
 
   return (
@@ -144,6 +154,7 @@ export function NerMap({
       >
         <MapClickHandler onSelectLocation={onSelectLocation} />
         <FlyToLocation locationId={selectedLocationId} />
+        <FlyToSearchLocation searchLocation={searchLocation} />
         <NASALayer enabled={showNasa} layerName={NASA_TILE_LAYERS[nasaLayer]} />
 
         {/* Base map */}
@@ -153,13 +164,29 @@ export function NerMap({
           opacity={showNasa ? 0.4 : 0.9}
         />
 
+         {/* Search location marker (from Open-Meteo search or geolocation) */}
+        {searchLocation && (
+          <Marker position={[searchLocation.lat, searchLocation.lng]} icon={L.divIcon({
+            className: 'search-location-marker',
+            html: `<div class="w-6 h-6 bg-blue-500 border-2 border-white rounded-full shadow-lg flex items-center justify-center" style="background:${searchLocation.risk === 'CRITICAL' ? '#ef4444' : searchLocation.risk === 'HIGH' ? '#f97316' : searchLocation.risk === 'MODERATE' ? '#eab308' : '#22c55e'}"></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 24],
+          })}>
+            <Popup>
+              <div className="text-xs">
+                <p className="font-bold text-navy-100">{searchLocation.name}</p>
+                <p className="text-navy-400">Searched location</p>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+
         {/* Risk Zones */}
         {layers.find((l) => l.id === 'risk')?.visible &&
           riskZones.map((zone) => {
             const loc = locations.find((l) => l.id === zone.locationId);
             if (!loc) return null;
             const color = getRiskColor(zone.risk);
-            const isSelected = selectedLocationId === zone.locationId;
 
             return (
               <Marker key={zone.locationId} position={[loc.lat, loc.lng]}>
@@ -189,7 +216,6 @@ export function NerMap({
 
         {/* Sensors */}
         {visibleSensors.map((sensor) => {
-          const color = sensor.status === 'CRITICAL' ? '#ef4444' : sensor.status === 'WARNING' ? '#eab308' : sensor.status === 'OFFLINE' ? '#627d98' : '#22c55e';
           return (
             <Marker key={sensor.id} position={[sensor.lat, sensor.lng]}>
               <Popup>

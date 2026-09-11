@@ -5,17 +5,17 @@ export default {
     extend: {
       colors: {
         navy: {
-          50: '#f0f4f8',
-          100: '#d9e2ec',
-          200: '#bcccdc',
-          300: '#9fb3c8',
-          400: '#829ab1',
-          500: '#627d98',
-          600: '#486581',
-          700: '#334e68',
-          800: '#243b53',
-          900: '#102a43',
-          950: '#0a1929',
+          50: 'rgb(var(--navy-50) / <alpha-value>)',
+          100: 'rgb(var(--navy-100) / <alpha-value>)',
+          200: 'rgb(var(--navy-200) / <alpha-value>)',
+          300: 'rgb(var(--navy-300) / <alpha-value>)',
+          400: 'rgb(var(--navy-400) / <alpha-value>)',
+          500: 'rgb(var(--navy-500) / <alpha-value>)',
+          600: 'rgb(var(--navy-600) / <alpha-value>)',
+          700: 'rgb(var(--navy-700) / <alpha-value>)',
+          800: 'rgb(var(--navy-800) / <alpha-value>)',
+          900: 'rgb(var(--navy-900) / <alpha-value>)',
+          950: 'rgb(var(--navy-950) / <alpha-value>)',
         },
         risk: {
           low: '#22c55e',
