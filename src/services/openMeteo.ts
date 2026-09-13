@@ -197,12 +197,16 @@ export async function fetchWeatherData(lat: number, lng: number): Promise<Weathe
   url.searchParams.set('latitude', String(lat));
   url.searchParams.set('longitude', String(lng));
   url.searchParams.set('current', 'temperature_2m,relative_humidity_2m,precipitation,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m');
-  url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation,weather_code,soil_moisture_at_1_to_3cm,soil_temperature_at_0_to_7cm,wind_speed_10m,pressure_msl');
+  url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m,pressure_msl');
   url.searchParams.set('timezone', 'auto');
   url.searchParams.set('forecast_days', '7');
+  url.searchParams.set('models', 'era5_land');
 
   const res = await fetch(url.toString());
-  if (!res.ok) throw new Error('Open-Meteo forecast request failed');
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Open-Meteo forecast request failed (${res.status}): ${errText}`);
+  }
   const data = await res.json();
 
   const current = data.current || {};
@@ -218,6 +222,9 @@ export async function fetchWeatherData(lat: number, lng: number): Promise<Weathe
     threeDay: sumLastN(precipitation, 72),
     sevenDay: sumLastN(precipitation, 168),
   };
+
+  const soilMoisture = hourly.soil_moisture_at_1_to_3cm || [];
+  const soilTemperature = hourly.soil_temperature_at_0_to_7cm || [];
 
   const result: WeatherData = {
     location: {
@@ -247,8 +254,8 @@ export async function fetchWeatherData(lat: number, lng: number): Promise<Weathe
       temperature: hourly.temperature_2m || [],
       humidity: hourly.relative_humidity_2m || [],
       precipitation,
-      soilMoisture: hourly.soil_moisture_at_1_to_3cm || [],
-      soilTemperature: hourly.soil_temperature_at_0_to_7cm || [],
+      soilMoisture,
+      soilTemperature,
       windSpeed: hourly.wind_speed_10m || [],
       pressure: hourly.pressure_msl || [],
       weatherCode: hourly.weather_code || [],
