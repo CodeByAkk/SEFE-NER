@@ -25,7 +25,7 @@ import type {
 } from '@/types';
 
 export const demoUsers: User[] = [
-  { id: 'u1', name: 'Rajesh Kumar', role: 'ADMIN', email: 'admin@nersafe.gov.in', avatar: 'RK' },
+  { id: 'u1', name: 'Anmol Kushvaha', role: 'ADMIN', email: 'admin@nersafe.gov.in', avatar: 'AK' },
   { id: 'u2', name: 'Priya Devi', role: 'DISTRICT_OFFICER', email: 'officer@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'PD' },
   { id: 'u3', name: 'Arun Singh', role: 'FIELD_OFFICER', email: 'field@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'AS' },
   { id: 'u4', name: 'Lalruatfeli', role: 'CITIZEN', email: 'citizen@nersafe.gov.in', district: 'Aizawl District', districtId: 'dist-aizawl', avatar: 'L' },
